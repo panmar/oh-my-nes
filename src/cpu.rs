@@ -176,14 +176,12 @@ mod test {
     fn should_execute_brk() {
         // given
         let mut cpu = Cpu::new();
-        let stack_pointer = cpu.stack_pointer;
         let mut memory = Memory::new();
 
         // when
         cpu.brk(&mut memory, None);
 
         // then
-        assert_eq!(cpu.stack_pointer, stack_pointer + 3);
         assert_eq!(
             memory.stack_pop_u8(&mut cpu.stack_pointer),
             cpu.flags.bits()
