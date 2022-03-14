@@ -57,7 +57,7 @@ impl Cpu {
             x_index: 0,
             y_index: 0,
             flags: Flags::empty(),
-            stack_pointer: 0,
+            stack_pointer: 0xFF,
             program_counter: 0,
         }
     }
@@ -71,7 +71,11 @@ impl Cpu {
         (instruction.handler)(self, memory, param_address);
     }
 
-    fn fetch_instruction_param_address(&self, memory: &Memory, mode: AddressingMode) -> Option<u16> {
+    fn fetch_instruction_param_address(
+        &self,
+        memory: &Memory,
+        mode: AddressingMode,
+    ) -> Option<u16> {
         let operand_address = self.program_counter + 1;
         use AddressingMode::*;
         match mode {
@@ -83,18 +87,10 @@ impl Cpu {
                 return Some(memory.fetch_u8(operand_address) as u16);
             }
             ZeroPageX => {
-                return Some(
-                    memory
-                        .fetch_u8(operand_address)
-                        .wrapping_add(self.x_index) as u16,
-                );
+                return Some(memory.fetch_u8(operand_address).wrapping_add(self.x_index) as u16);
             }
             ZeroPageY => {
-                return Some(
-                    memory
-                        .fetch_u8(operand_address)
-                        .wrapping_add(self.y_index) as u16,
-                );
+                return Some(memory.fetch_u8(operand_address).wrapping_add(self.y_index) as u16);
             }
             Relative => {
                 return Some(memory.fetch_u8(operand_address) as u16);
@@ -146,8 +142,12 @@ const INSTRUCTIONS: [Instruction; 2] = [
 
 impl Cpu {
     fn brk(&mut self, memory: &mut Memory, _param_address: Option<u16>) {
-        memory.stack_push_u16(&mut self.stack_pointer, self.program_counter);
-        memory.stack_push_u8(&mut self.stack_pointer, self.flags.bits());
+        memory
+            .stack(&mut self.stack_pointer)
+            .push_u16(self.program_counter);
+        memory
+            .stack(&mut self.stack_pointer)
+            .push_u8(self.flags.bits());
     }
 
     fn ora(&mut self, memory: &mut Memory, param_address: Option<u16>) {
@@ -176,6 +176,8 @@ mod test {
     fn should_execute_brk() {
         // given
         let mut cpu = Cpu::new();
+        cpu.program_counter = 0x1234;
+        cpu.flags.bits = 0b10111010;
         let mut memory = Memory::new();
 
         // when
@@ -183,11 +185,11 @@ mod test {
 
         // then
         assert_eq!(
-            memory.stack_pop_u8(&mut cpu.stack_pointer),
+            memory.stack(&mut cpu.stack_pointer).pop_u8(),
             cpu.flags.bits()
         );
         assert_eq!(
-            memory.stack_pop_u16(&mut cpu.stack_pointer),
+            memory.stack(&mut cpu.stack_pointer).pop_u16(),
             cpu.program_counter
         );
     }
