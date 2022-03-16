@@ -133,7 +133,8 @@ impl Cpu {
     fn set_accumulator(&mut self, value: u8) {
         self.accumulator = value;
         self.flags.set(Flags::ZERO, self.accumulator == 0);
-        self.flags.set(Flags::NEGATIVE, self.accumulator & 0b1000_0000 != 0);
+        self.flags
+            .set(Flags::NEGATIVE, self.accumulator & 0b1000_0000 != 0);
     }
 }
 
@@ -152,6 +153,7 @@ impl Cpu {
 
         self.flags.set(Flags::CARRY, carry_1 || carry_2);
 
+        // http://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
         self.flags.set(
             Flags::OVERFLOW,
             (self.accumulator ^ result) & (operand ^ result) & 0x80 != 0,
