@@ -31,7 +31,7 @@ struct Instruction {
     mode: AddressingMode,
     bytesize: u8,
     cycles: u8,
-    handler: fn(cpu: &mut Cpu, memory: &mut Memory, param_address: Option<u16>),
+    handler: fn(cpu: &mut Cpu, memory: &mut Memory, operand_address: Option<u16>),
 }
 
 #[derive(Clone, Copy)]
@@ -129,9 +129,12 @@ impl Cpu {
     }
 }
 
-#[repr(u8)]
-enum InstructionOpcode {
-    BRK_IMPLICIT = 0x00,
+impl Cpu {
+    fn set_accumulator(&mut self, value: u8) {
+        self.accumulator = value;
+        self.flags.set(Flags::ZERO, self.accumulator == 0);
+        self.flags.set(Flags::NEGATIVE, self.accumulator & 0b1000_0000 != 0);
+    }
 }
 
 #[rustfmt::skip]
@@ -141,7 +144,23 @@ const INSTRUCTIONS: [Instruction; 2] = [
 ];
 
 impl Cpu {
-    fn brk(&mut self, memory: &mut Memory, _param_address: Option<u16>) {
+    fn adc(&mut self, memory: &mut Memory, operand_address: Option<u16>) {
+        let operand = memory.fetch_u8(operand_address.unwrap());
+
+        let (result, carry_1) = self.accumulator.overflowing_add(operand);
+        let (result, carry_2) = result.overflowing_add(self.flags.contains(Flags::CARRY) as u8);
+
+        self.flags.set(Flags::CARRY, carry_1 || carry_2);
+
+        self.flags.set(
+            Flags::OVERFLOW,
+            (self.accumulator ^ result) & (operand ^ result) & 0x80 != 0,
+        );
+
+        self.set_accumulator(result);
+    }
+
+    fn brk(&mut self, memory: &mut Memory, _operand_address: Option<u16>) {
         memory
             .stack(&mut self.stack_pointer)
             .push_u16(self.program_counter);
@@ -150,27 +169,62 @@ impl Cpu {
             .push_u8(self.flags.bits());
     }
 
-    fn ora(&mut self, memory: &mut Memory, param_address: Option<u16>) {
-        let address = param_address.unwrap();
-        self.accumulator |= memory.fetch_u8(address);
-        self.flags.set(
-            Flags::ZERO,
-            if self.accumulator == 0 { true } else { false },
-        );
-        self.flags.set(
-            Flags::NEGATIVE,
-            if self.accumulator.leading_ones() > 0 {
-                true
-            } else {
-                false
-            },
-        );
+    fn ora(&mut self, memory: &mut Memory, operand_address: Option<u16>) {
+        let operand = memory.fetch_u8(operand_address.unwrap());
+        self.set_accumulator(self.accumulator | operand);
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+
+    fn set_operand(memory: &mut Memory, value: u8) -> Option<u16> {
+        let address = 0x0042;
+        memory.set_u8(address, value);
+        return Some(address);
+    }
+
+    #[test]
+    fn should_execute_adc() {
+        fn test_adc(
+            accumulator: u8,
+            opperand: u8,
+            carry_flag: bool,
+            expected_accumulator: u8,
+            expected_flags: Flags,
+        ) {
+            let affected_flags = Flags::CARRY | Flags::ZERO | Flags::OVERFLOW | Flags::NEGATIVE;
+            let expected_unaffected_flags = !affected_flags;
+            let expected_unset_flags = affected_flags.difference(expected_flags);
+
+            // given
+            let mut cpu = Cpu::new();
+            cpu.accumulator = accumulator;
+            let mut memory = Memory::new();
+            let operand_address = set_operand(&mut memory, opperand);
+            cpu.flags.set(Flags::CARRY, carry_flag);
+            let prev_cpu_flags = cpu.flags;
+
+            // when
+            cpu.adc(&mut memory, operand_address);
+
+            // then
+            assert_eq!(cpu.accumulator, expected_accumulator);
+            assert!(cpu.flags.contains(expected_flags));
+            assert!(!cpu.flags.intersects(expected_unset_flags));
+
+            assert_eq!(
+                cpu.flags.intersection(expected_unaffected_flags),
+                prev_cpu_flags.intersection(expected_unaffected_flags),
+            );
+        }
+
+        test_adc(0x00, 0x00, false, 0x00, Flags::ZERO);
+        test_adc(0x77, 0x03, false, 0x7A, Flags::empty());
+        test_adc(0x40, 0x40, false, 0x80, Flags::NEGATIVE | Flags::OVERFLOW);
+        test_adc(0xFF, 0xFF, true, 0xFF, Flags::NEGATIVE | Flags::CARRY);
+    }
 
     #[test]
     fn should_execute_brk() {
