@@ -9,4 +9,5 @@ A NES emulator
 * http://www.emulator101.com/reference/6502-reference.html
 * http://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
 * https://skilldrick.github.io/easy6502/
-* https://bugzmanov.github.io/nes_ebook/chapter_1.html
+* https://www.masswerk.at/6502/
+* https://bugzmanov.github.io/nes_ebook/
