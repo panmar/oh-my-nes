@@ -11,3 +11,4 @@ A NES emulator
 * https://skilldrick.github.io/easy6502/
 * https://www.masswerk.at/6502/
 * https://bugzmanov.github.io/nes_ebook/
+* https://link.springer.com/content/pdf/bbm%253A978-1-349-07360-3%252F1.pdf
