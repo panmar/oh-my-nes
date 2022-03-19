@@ -642,7 +642,7 @@ mod test {
         // then
         assert_eq!(
             memory.stack(&mut cpu.stack_pointer).pop_u8(),
-            cpu.flags.bits()
+            0b10111010
         );
         assert_eq!(
             memory.stack(&mut cpu.stack_pointer).pop_u16(),
