@@ -1,6 +1,8 @@
-const MEMORY_SIZE: usize = 0xFFFF;
+const MEMORY_SIZE: usize = 0xFFFF + 1;
 const STACK_BEGIN: usize = 0x0100;
 const STACK_END: usize = 0x01FF + 1;
+
+pub type Address = u16;
 
 pub struct Memory {
     data: [u8; MEMORY_SIZE],
@@ -13,15 +15,15 @@ impl Memory {
         }
     }
 
-    pub fn fetch_u8(&self, address: u16) -> u8 {
+    pub fn fetch_u8(&self, address: Address) -> u8 {
         self.data[address as usize]
     }
 
-    pub fn fetch_u16(&self, address: u16) -> u16 {
+    pub fn fetch_u16(&self, address: Address) -> u16 {
         u16::from_le_bytes([self.fetch_u8(address), self.fetch_u8(address + 1)])
     }
 
-    pub fn set_u8(&mut self, address: u16, value: u8) {
+    pub fn set_u8(&mut self, address: Address, value: u8) {
         self.data[address as usize] = value;
     }
 }
