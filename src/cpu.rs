@@ -33,7 +33,7 @@ struct Instruction {
     mode: AddressingMode,
     bytesize: u8,
     cycles: u8,
-    handler: fn(cpu: &mut Cpu, memory: &mut Memory, arg_ptr: Option<Address>),
+    handler: fn(cpu: &mut Cpu, memory: &mut Memory, arg_address: Option<Address>),
 }
 
 #[derive(Clone, Copy)]
@@ -78,51 +78,51 @@ impl Cpu {
         memory: &Memory,
         mode: AddressingMode,
     ) -> Option<Address> {
-        let arg_ptr = self.program_counter + 1;
+        let arg_address = self.program_counter + 1;
         use AddressingMode::*;
         match mode {
             Implicit => None,
             Immidiate => {
-                return Some(arg_ptr);
+                return Some(arg_address);
             }
             ZeroPage => {
-                return Some(memory.fetch_u8(arg_ptr) as u16);
+                return Some(memory.fetch_u8(arg_address) as u16);
             }
             ZeroPageX => {
-                return Some(memory.fetch_u8(arg_ptr).wrapping_add(self.x_index) as u16);
+                return Some(memory.fetch_u8(arg_address).wrapping_add(self.x_index) as u16);
             }
             ZeroPageY => {
-                return Some(memory.fetch_u8(arg_ptr).wrapping_add(self.y_index) as u16);
+                return Some(memory.fetch_u8(arg_address).wrapping_add(self.y_index) as u16);
             }
             Relative => {
-                return Some(memory.fetch_u8(arg_ptr) as u16);
+                return Some(memory.fetch_u8(arg_address) as u16);
             }
             Absolute => {
-                return Some(memory.fetch_u16(arg_ptr));
+                return Some(memory.fetch_u16(arg_address));
             }
             AbsoluteX => {
-                let base = memory.fetch_u16(arg_ptr);
+                let base = memory.fetch_u16(arg_address);
                 let offset = self.x_index as u16;
                 return Some(base + offset);
             }
             AbsoluteY => {
-                let base = memory.fetch_u16(arg_ptr);
+                let base = memory.fetch_u16(arg_address);
                 let offset = self.y_index as u16;
                 return Some(base + offset);
             }
             Indirect => {
-                let address_indirect = memory.fetch_u16(arg_ptr);
+                let address_indirect = memory.fetch_u16(arg_address);
                 let address = memory.fetch_u16(address_indirect);
                 return Some(address);
             }
             IndirectX => {
-                let address_indirect_base = memory.fetch_u16(arg_ptr);
+                let address_indirect_base = memory.fetch_u16(arg_address);
                 let address_indirect = address_indirect_base.wrapping_add(self.x_index as u16);
                 let address = memory.fetch_u16(address_indirect);
                 return Some(address);
             }
             IndirectY => {
-                let address_indirect_base = memory.fetch_u16(arg_ptr);
+                let address_indirect_base = memory.fetch_u16(arg_address);
                 let address_indirect = address_indirect_base.wrapping_add(self.y_index as u16);
                 let address = memory.fetch_u16(address_indirect);
                 return Some(address);
@@ -145,6 +145,11 @@ impl Cpu {
         let result = lhs.wrapping_sub(rhs);
         self.flags.set(Flags::NEGATIVE, result & 0b1000_0000 != 0);
     }
+
+    fn jump(&mut self, relative_address: i8) {
+        let jump_address = self.program_counter as i32 + relative_address as i32;
+        self.program_counter = jump_address as u16;
+    }
 }
 
 #[rustfmt::skip]
@@ -154,8 +159,8 @@ const INSTRUCTIONS: [Instruction; 2] = [
 ];
 
 impl Cpu {
-    fn adc(&mut self, memory: &mut Memory, arg_ptr: Option<Address>) {
-        let arg = memory.fetch_u8(arg_ptr.unwrap());
+    fn adc(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
+        let arg = memory.fetch_u8(arg_address.unwrap());
 
         let (result, carry_1) = self.accumulator.overflowing_add(arg);
         let (result, carry_2) = result.overflowing_add(self.flags.contains(Flags::CARRY) as u8);
@@ -171,13 +176,13 @@ impl Cpu {
         self.set_accumulator(result);
     }
 
-    fn and(&mut self, memory: &mut Memory, arg_ptr: Option<Address>) {
-        let arg = memory.fetch_u8(arg_ptr.unwrap());
+    fn and(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
+        let arg = memory.fetch_u8(arg_address.unwrap());
         self.set_accumulator(self.accumulator & arg);
     }
 
-    fn asl(&mut self, memory: &mut Memory, arg_ptr: Option<Address>) {
-        match arg_ptr {
+    fn asl(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
+        match arg_address {
             Some(address) => {
                 let arg = memory.fetch_u8(address);
                 let (result, carry) = arg.overflowing_shl(1);
@@ -194,51 +199,54 @@ impl Cpu {
         }
     }
 
-    fn bcc(&mut self, _memory: &mut Memory, arg_ptr: Option<Address>) {
+    fn bcc(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
         if !self.flags.contains(Flags::CARRY) {
-            self.program_counter += arg_ptr.unwrap();
+            let relative_address = memory.fetch_u8(arg_address.unwrap()) as i8;
+            self.jump(relative_address);
         }
     }
 
-    fn bcs(&mut self, _memory: &mut Memory, arg_ptr: Option<Address>) {
+    fn bcs(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
         if self.flags.contains(Flags::CARRY) {
-            self.program_counter += arg_ptr.unwrap();
+            let relative_address = memory.fetch_u8(arg_address.unwrap()) as i8;
+            self.jump(relative_address);
         }
     }
 
-    fn beq(&mut self, _memory: &mut Memory, arg_ptr: Option<Address>) {
+    fn beq(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
         if self.flags.contains(Flags::ZERO) {
-            self.program_counter += arg_ptr.unwrap();
+            let relative_address = memory.fetch_u8(arg_address.unwrap()) as i8;
+            self.jump(relative_address);
         }
     }
 
-    fn bit(&mut self, memory: &mut Memory, arg_ptr: Option<Address>) {
-        let arg = memory.fetch_u8(arg_ptr.unwrap());
+    fn bit(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
+        let arg = memory.fetch_u8(arg_address.unwrap());
         let result = self.accumulator & arg;
         self.flags.set(Flags::ZERO, result == 0);
         self.flags.set(Flags::NEGATIVE, result & 0b1000_0000 != 0);
         self.flags.set(Flags::OVERFLOW, result & 0b0100_0000 != 0);
     }
 
-    fn bmi(&mut self, _memory: &mut Memory, arg_ptr: Option<Address>) {
+    fn bmi(&mut self, _memory: &mut Memory, arg_address: Option<Address>) {
         if self.flags.contains(Flags::NEGATIVE) {
-            self.program_counter += arg_ptr.unwrap();
+            self.program_counter += arg_address.unwrap();
         }
     }
 
-    fn bne(&mut self, _memory: &mut Memory, arg_ptr: Option<Address>) {
+    fn bne(&mut self, _memory: &mut Memory, arg_address: Option<Address>) {
         if !self.flags.contains(Flags::ZERO) {
-            self.program_counter += arg_ptr.unwrap();
+            self.program_counter += arg_address.unwrap();
         }
     }
 
-    fn bpl(&mut self, _memory: &mut Memory, arg_ptr: Option<Address>) {
+    fn bpl(&mut self, _memory: &mut Memory, arg_address: Option<Address>) {
         if !self.flags.contains(Flags::NEGATIVE) {
-            self.program_counter += arg_ptr.unwrap();
+            self.program_counter += arg_address.unwrap();
         }
     }
 
-    fn brk(&mut self, memory: &mut Memory, _arg_ptr: Option<Address>) {
+    fn brk(&mut self, memory: &mut Memory, _arg_address: Option<Address>) {
         memory
             .stack(&mut self.stack_pointer)
             .push_u16(self.program_counter);
@@ -251,51 +259,51 @@ impl Cpu {
         self.program_counter = memory.fetch_u16(0xFFFE);
     }
 
-    fn bvc(&mut self, _memory: &mut Memory, arg_ptr: Option<Address>) {
+    fn bvc(&mut self, _memory: &mut Memory, arg_address: Option<Address>) {
         if !self.flags.contains(Flags::OVERFLOW) {
-            self.program_counter += arg_ptr.unwrap();
+            self.program_counter += arg_address.unwrap();
         }
     }
 
-    fn bvs(&mut self, _memory: &mut Memory, arg_ptr: Option<Address>) {
+    fn bvs(&mut self, _memory: &mut Memory, arg_address: Option<Address>) {
         if self.flags.contains(Flags::OVERFLOW) {
-            self.program_counter += arg_ptr.unwrap();
+            self.program_counter += arg_address.unwrap();
         }
     }
 
-    fn clc(&mut self, _memory: &mut Memory, _arg_ptr: Option<Address>) {
+    fn clc(&mut self, _memory: &mut Memory, _arg_address: Option<Address>) {
         self.flags.set(Flags::CARRY, false);
     }
 
-    fn cld(&mut self, _memory: &mut Memory, _arg_ptr: Option<Address>) {
+    fn cld(&mut self, _memory: &mut Memory, _arg_address: Option<Address>) {
         self.flags.set(Flags::DECIMAL, false);
     }
 
-    fn cli(&mut self, _memory: &mut Memory, _arg_ptr: Option<Address>) {
+    fn cli(&mut self, _memory: &mut Memory, _arg_address: Option<Address>) {
         self.flags.set(Flags::INTERRUPT_DISABLE, false);
     }
 
-    fn clv(&mut self, _memory: &mut Memory, _arg_ptr: Option<Address>) {
+    fn clv(&mut self, _memory: &mut Memory, _arg_address: Option<Address>) {
         self.flags.set(Flags::CARRY, false);
     }
 
-    fn cmp(&mut self, memory: &mut Memory, arg_ptr: Option<Address>) {
-        let arg = memory.fetch_u8(arg_ptr.unwrap());
+    fn cmp(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
+        let arg = memory.fetch_u8(arg_address.unwrap());
         self.compare(self.accumulator, arg);
     }
 
-    fn cpx(&mut self, memory: &mut Memory, arg_ptr: Option<Address>) {
-        let arg = memory.fetch_u8(arg_ptr.unwrap());
+    fn cpx(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
+        let arg = memory.fetch_u8(arg_address.unwrap());
         self.compare(self.x_index, arg);
     }
 
-    fn cpy(&mut self, memory: &mut Memory, arg_ptr: Option<Address>) {
-        let arg = memory.fetch_u8(arg_ptr.unwrap());
+    fn cpy(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
+        let arg = memory.fetch_u8(arg_address.unwrap());
         self.compare(self.y_index, arg);
     }
 
-    fn dec(&mut self, memory: &mut Memory, arg_ptr: Option<Address>) {
-        let address = arg_ptr.unwrap();
+    fn dec(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
+        let address = arg_address.unwrap();
         let arg = memory.fetch_u8(address);
         let result = arg.wrapping_sub(1);
         memory.set_u8(address, result);
@@ -303,30 +311,30 @@ impl Cpu {
         self.flags.set(Flags::NEGATIVE, result & 0b1000_0000 != 0);
     }
 
-    fn dex(&mut self, _memory: &mut Memory, _arg_ptr: Option<Address>) {
+    fn dex(&mut self, _memory: &mut Memory, _arg_address: Option<Address>) {
         self.x_index = self.x_index.wrapping_sub(1);
         self.flags.set(Flags::ZERO, self.x_index == 0);
         self.flags
             .set(Flags::NEGATIVE, self.x_index & 0b1000_0000 != 0);
     }
 
-    fn dey(&mut self, _memory: &mut Memory, _arg_ptr: Option<Address>) {
+    fn dey(&mut self, _memory: &mut Memory, _arg_address: Option<Address>) {
         self.y_index = self.y_index.wrapping_sub(1);
         self.flags.set(Flags::ZERO, self.y_index == 0);
         self.flags
             .set(Flags::NEGATIVE, self.y_index & 0b1000_0000 != 0);
     }
 
-    fn eor(&mut self, memory: &mut Memory, arg_ptr: Option<Address>) {
-        let arg = memory.fetch_u8(arg_ptr.unwrap());
+    fn eor(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
+        let arg = memory.fetch_u8(arg_address.unwrap());
         self.accumulator = self.accumulator ^ arg;
         self.flags.set(Flags::ZERO, self.accumulator == 0);
         self.flags
             .set(Flags::NEGATIVE, self.accumulator & 0b1000_0000 != 0);
     }
 
-    fn inc(&mut self, memory: &mut Memory, arg_ptr: Option<Address>) {
-        let address = arg_ptr.unwrap();
+    fn inc(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
+        let address = arg_address.unwrap();
         let arg = memory.fetch_u8(address);
         let result = arg.wrapping_add(1);
         memory.set_u8(address, result);
@@ -334,27 +342,27 @@ impl Cpu {
         self.flags.set(Flags::NEGATIVE, result & 0b1000_0000 != 0);
     }
 
-    fn inx(&mut self, _memory: &mut Memory, _arg_ptr: Option<Address>) {
+    fn inx(&mut self, _memory: &mut Memory, _arg_address: Option<Address>) {
         self.x_index = self.x_index.wrapping_add(1);
         self.flags.set(Flags::ZERO, self.x_index == 0);
         self.flags
             .set(Flags::NEGATIVE, self.x_index & 0b1000_0000 != 0);
     }
 
-    fn iny(&mut self, _memory: &mut Memory, _arg_ptr: Option<Address>) {
+    fn iny(&mut self, _memory: &mut Memory, _arg_address: Option<Address>) {
         self.y_index = self.y_index.wrapping_add(1);
         self.flags.set(Flags::ZERO, self.y_index == 0);
         self.flags
             .set(Flags::NEGATIVE, self.y_index & 0b1000_0000 != 0);
     }
 
-    fn jmp(&mut self, memory: &mut Memory, arg_ptr: Option<Address>) {
-        let arg = memory.fetch_u8(arg_ptr.unwrap());
+    fn jmp(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
+        let arg = memory.fetch_u8(arg_address.unwrap());
         self.program_counter = arg as u16;
     }
 
-    fn jrs(&mut self, memory: &mut Memory, arg_ptr: Option<Address>) {
-        let arg = memory.fetch_u8(arg_ptr.unwrap());
+    fn jrs(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
+        let arg = memory.fetch_u8(arg_address.unwrap());
 
         // TODO(panmar): Do we change stack pointer here?
         memory
@@ -363,29 +371,29 @@ impl Cpu {
         self.program_counter = arg as u16;
     }
 
-    fn lda(&mut self, memory: &mut Memory, arg_ptr: Option<Address>) {
-        let arg = memory.fetch_u8(arg_ptr.unwrap());
+    fn lda(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
+        let arg = memory.fetch_u8(arg_address.unwrap());
         self.set_accumulator(arg);
     }
 
-    fn ldx(&mut self, memory: &mut Memory, arg_ptr: Option<Address>) {
-        let arg = memory.fetch_u8(arg_ptr.unwrap());
+    fn ldx(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
+        let arg = memory.fetch_u8(arg_address.unwrap());
         self.x_index = arg;
         self.flags.set(Flags::ZERO, self.x_index == 0);
         self.flags
             .set(Flags::NEGATIVE, self.x_index & 0b1000_0000 != 0);
     }
 
-    fn ldy(&mut self, memory: &mut Memory, arg_ptr: Option<Address>) {
-        let arg = memory.fetch_u8(arg_ptr.unwrap());
+    fn ldy(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
+        let arg = memory.fetch_u8(arg_address.unwrap());
         self.y_index = arg;
         self.flags.set(Flags::ZERO, self.y_index == 0);
         self.flags
             .set(Flags::NEGATIVE, self.y_index & 0b1000_0000 != 0);
     }
 
-    fn lhr(&mut self, memory: &mut Memory, arg_ptr: Option<Address>) {
-        match arg_ptr {
+    fn lhr(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
+        match arg_address {
             Some(address) => {
                 let arg = memory.fetch_u8(address);
                 self.flags.set(Flags::CARRY, arg & 1 != 0);
@@ -402,38 +410,38 @@ impl Cpu {
         }
     }
 
-    fn nop(&mut self, _memory: &mut Memory, _arg_ptr: Option<Address>) {}
+    fn nop(&mut self, _memory: &mut Memory, _arg_address: Option<Address>) {}
 
-    fn ora(&mut self, memory: &mut Memory, arg_ptr: Option<Address>) {
-        let arg = memory.fetch_u8(arg_ptr.unwrap());
+    fn ora(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
+        let arg = memory.fetch_u8(arg_address.unwrap());
         self.set_accumulator(self.accumulator | arg);
     }
 
-    fn pha(&mut self, memory: &mut Memory, _arg_ptr: Option<Address>) {
+    fn pha(&mut self, memory: &mut Memory, _arg_address: Option<Address>) {
         memory
             .stack(&mut self.stack_pointer)
             .push_u8(self.accumulator);
     }
 
-    fn php(&mut self, memory: &mut Memory, _arg_ptr: Option<Address>) {
+    fn php(&mut self, memory: &mut Memory, _arg_address: Option<Address>) {
         let mut flags = self.flags;
         flags.insert(Flags::BREAK1 | Flags::BREAK2);
         memory.stack(&mut self.stack_pointer).push_u8(flags.bits());
     }
 
-    fn pla(&mut self, memory: &mut Memory, _arg_ptr: Option<Address>) {
+    fn pla(&mut self, memory: &mut Memory, _arg_address: Option<Address>) {
         let new_accumulator = memory.stack(&mut self.stack_pointer).pop_u8();
         self.set_accumulator(new_accumulator);
     }
 
-    fn plp(&mut self, memory: &mut Memory, _arg_ptr: Option<Address>) {
+    fn plp(&mut self, memory: &mut Memory, _arg_address: Option<Address>) {
         let new_flags = memory.stack(&mut self.stack_pointer).pop_u8();
         self.flags = Flags::from_bits(new_flags).unwrap();
         self.flags.remove(Flags::BREAK1 | Flags::BREAK2);
     }
 
-    fn rol(&mut self, memory: &mut Memory, arg_ptr: Option<Address>) {
-        match arg_ptr {
+    fn rol(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
+        match arg_address {
             Some(address) => {
                 let arg = memory.fetch_u8(address);
                 let new_carry = (arg & 0b1000_0000) != 0;
@@ -460,8 +468,8 @@ impl Cpu {
         }
     }
 
-    fn ror(&mut self, memory: &mut Memory, arg_ptr: Option<Address>) {
-        match arg_ptr {
+    fn ror(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
+        match arg_address {
             Some(address) => {
                 let arg = memory.fetch_u8(address);
                 let new_carry = (arg & 0b0000_0001) != 0;
@@ -488,19 +496,19 @@ impl Cpu {
         }
     }
 
-    fn rti(&mut self, memory: &mut Memory, _arg_ptr: Option<Address>) {
+    fn rti(&mut self, memory: &mut Memory, _arg_address: Option<Address>) {
         let new_flags = memory.stack(&mut self.stack_pointer).pop_u8();
         self.flags = Flags::from_bits(new_flags).unwrap();
         self.program_counter = memory.stack(&mut self.stack_pointer).pop_u16();
     }
 
-    fn rts(&mut self, memory: &mut Memory, _arg_ptr: Option<Address>) {
+    fn rts(&mut self, memory: &mut Memory, _arg_address: Option<Address>) {
         // TODO(panmar): Do we need to increments by 1?
         self.program_counter = memory.stack(&mut self.stack_pointer).pop_u16() + 1;
     }
 
-    fn sbc(&mut self, memory: &mut Memory, arg_ptr: Option<Address>) {
-        let mut arg = memory.fetch_u8(arg_ptr.unwrap());
+    fn sbc(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
+        let mut arg = memory.fetch_u8(arg_address.unwrap());
         // A - B = A + (-B) = A + (!B + 1)
         arg = !arg.wrapping_add(1);
 
@@ -519,60 +527,60 @@ impl Cpu {
         self.set_accumulator(result);
     }
 
-    fn sec(&mut self, _memory: &mut Memory, _arg_ptr: Option<Address>) {
+    fn sec(&mut self, _memory: &mut Memory, _arg_address: Option<Address>) {
         self.flags.set(Flags::CARRY, true);
     }
 
-    fn sed(&mut self, _memory: &mut Memory, _arg_ptr: Option<Address>) {
+    fn sed(&mut self, _memory: &mut Memory, _arg_address: Option<Address>) {
         self.flags.set(Flags::DECIMAL, true);
     }
 
-    fn sei(&mut self, _memory: &mut Memory, _arg_ptr: Option<Address>) {
+    fn sei(&mut self, _memory: &mut Memory, _arg_address: Option<Address>) {
         self.flags.set(Flags::INTERRUPT_DISABLE, true);
     }
 
-    fn sta(&mut self, memory: &mut Memory, arg_ptr: Option<Address>) {
-        memory.set_u8(arg_ptr.unwrap(), self.accumulator);
+    fn sta(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
+        memory.set_u8(arg_address.unwrap(), self.accumulator);
     }
 
-    fn stx(&mut self, memory: &mut Memory, arg_ptr: Option<Address>) {
-        memory.set_u8(arg_ptr.unwrap(), self.x_index);
+    fn stx(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
+        memory.set_u8(arg_address.unwrap(), self.x_index);
     }
 
-    fn sty(&mut self, memory: &mut Memory, arg_ptr: Option<Address>) {
-        memory.set_u8(arg_ptr.unwrap(), self.y_index);
+    fn sty(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
+        memory.set_u8(arg_address.unwrap(), self.y_index);
     }
 
-    fn tax(&mut self, _memory: &mut Memory, _arg_ptr: Option<Address>) {
+    fn tax(&mut self, _memory: &mut Memory, _arg_address: Option<Address>) {
         self.x_index = self.accumulator;
         self.flags.set(Flags::ZERO, self.x_index == 0);
         self.flags
             .set(Flags::NEGATIVE, self.x_index & 0b1000_0000 != 0);
     }
 
-    fn tay(&mut self, _memory: &mut Memory, _arg_ptr: Option<Address>) {
+    fn tay(&mut self, _memory: &mut Memory, _arg_address: Option<Address>) {
         self.y_index = self.accumulator;
         self.flags.set(Flags::ZERO, self.y_index == 0);
         self.flags
             .set(Flags::NEGATIVE, self.y_index & 0b1000_0000 != 0);
     }
 
-    fn tsx(&mut self, _memory: &mut Memory, _arg_ptr: Option<Address>) {
+    fn tsx(&mut self, _memory: &mut Memory, _arg_address: Option<Address>) {
         self.x_index = self.stack_pointer;
         self.flags.set(Flags::ZERO, self.x_index == 0);
         self.flags
             .set(Flags::NEGATIVE, self.x_index & 0b1000_0000 != 0);
     }
 
-    fn txa(&mut self, _memory: &mut Memory, _arg_ptr: Option<Address>) {
+    fn txa(&mut self, _memory: &mut Memory, _arg_address: Option<Address>) {
         self.set_accumulator(self.x_index);
     }
 
-    fn txs(&mut self, _memory: &mut Memory, _arg_ptr: Option<Address>) {
+    fn txs(&mut self, _memory: &mut Memory, _arg_address: Option<Address>) {
         self.stack_pointer = self.x_index;
     }
 
-    fn tya(&mut self, _memory: &mut Memory, _arg_ptr: Option<Address>) {
+    fn tya(&mut self, _memory: &mut Memory, _arg_address: Option<Address>) {
         self.set_accumulator(self.y_index);
     }
 }
@@ -604,12 +612,12 @@ mod test {
             let mut cpu = Cpu::new();
             cpu.accumulator = accumulator;
             let mut memory = Memory::new();
-            let arg_ptr = set_operand(&mut memory, opperand);
+            let arg_address = set_operand(&mut memory, opperand);
             cpu.flags.set(Flags::CARRY, carry_flag);
             let prev_cpu_flags = cpu.flags;
 
             // when
-            cpu.adc(&mut memory, arg_ptr);
+            cpu.adc(&mut memory, arg_address);
 
             // then
             assert_eq!(cpu.accumulator, expected_accumulator);
