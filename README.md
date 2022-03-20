@@ -1,7 +1,7 @@
 # oh-my-nes
 A NES emulator
 
-## Further reading
+## Resources
 * https://www.nesdev.com/NESDoc.pdf
 * https://www.nesdev.org/wiki/Nesdev
 * https://web.archive.org/web/20210803072420/http://www.obelisk.me.uk/6502/
