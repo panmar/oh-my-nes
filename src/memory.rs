@@ -1,6 +1,6 @@
 const MEMORY_SIZE: usize = 0xFFFF + 1;
 const STACK_BEGIN: usize = 0x0100;
-const STACK_END: usize = 0x01FF + 1;
+const STACK_END: usize = 0x01FF;
 
 pub type Address = u16;
 
@@ -37,7 +37,7 @@ pub struct Stack<'a> {
 impl Memory {
     pub fn stack<'a>(&'a mut self, stack_pointer: &'a mut u8) -> Stack<'a> {
         Stack {
-            data: &mut self.data[STACK_BEGIN..STACK_END],
+            data: &mut self.data[STACK_BEGIN..STACK_END + 1],
             stack_pointer,
         }
     }
@@ -46,7 +46,7 @@ impl Memory {
 impl Stack<'_> {
     pub fn push_u8(&mut self, value: u8) {
         self.data[*self.stack_pointer as usize] = value;
-        *self.stack_pointer = self.stack_pointer.checked_sub(1).expect("Stack is full");
+        *self.stack_pointer = self.stack_pointer.wrapping_sub(1);
     }
 
     pub fn push_u16(&mut self, value: u16) {
@@ -57,7 +57,7 @@ impl Stack<'_> {
     }
 
     pub fn pop_u8(&mut self) -> u8 {
-        *self.stack_pointer = self.stack_pointer.checked_add(1).expect("Stack is empty");
+        *self.stack_pointer = self.stack_pointer.wrapping_add(1);
         return self.data[*self.stack_pointer as usize];
     }
 
@@ -97,28 +97,33 @@ mod test {
     }
 
     #[test]
-    #[should_panic]
-    fn should_panic_when_pop_from_empty_stack() {
+    fn should_pop_from_empty_stack_wrapping_around() {
         // given
         let mut memory = Memory::new();
+        memory.data[STACK_BEGIN] = 0x42;
         let mut stack_pointer = STACK_POINTER_ADDRESS;
         let mut stack = memory.stack(&mut stack_pointer);
 
         // when
-        stack.pop_u8();
+        let value = stack.pop_u8();
+
+        // then
+        assert_eq!(value, 0x42);
     }
 
     #[test]
-    #[should_panic]
-    fn should_panic_when_push_to_full_stack() {
+    fn should_push_to_full_stack_wrapping_around() {
         // given
         let mut memory = Memory::new();
-        let mut stack_pointer = STACK_POINTER_ADDRESS;
+        let mut stack_pointer = 0x00u8;
         let mut stack = memory.stack(&mut stack_pointer);
 
         // when
-        for _i in STACK_BEGIN..STACK_END {
-            stack.push_u8(0x42);
-        }
+        stack.push_u8(0x42);
+        stack.push_u8(0x42);
+
+        // then
+        assert_eq!(memory.data[STACK_BEGIN], 0x42);
+        assert_eq!(memory.data[STACK_END], 0x42);
     }
 }
