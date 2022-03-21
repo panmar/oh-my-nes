@@ -15,16 +15,26 @@ impl Memory {
         }
     }
 
-    pub fn fetch_u8(&self, address: Address) -> u8 {
-        self.data[address as usize]
+    pub fn read_u8(&self, address: Address) -> u8 {
+        let effective_address = Memory::compute_effective_address(address) as usize;
+        self.data[effective_address]
     }
 
-    pub fn fetch_u16(&self, address: Address) -> u16 {
-        u16::from_le_bytes([self.fetch_u8(address), self.fetch_u8(address + 1)])
+    pub fn read_u16(&self, address: Address) -> u16 {
+        u16::from_le_bytes([self.read_u8(address), self.read_u8(address + 1)])
     }
 
-    pub fn set_u8(&mut self, address: Address, value: u8) {
-        self.data[address as usize] = value;
+    pub fn write_u8(&mut self, address: Address, value: u8) {
+        let effective_address = Memory::compute_effective_address(address) as usize;
+        self.data[effective_address] = value;
+    }
+
+    fn compute_effective_address(address: Address) -> Address {
+        let effective_address = match address {
+            0x0800..=0x1FFF => address & 0b00_0111_1111_1111,
+            _ => address,
+        };
+        return effective_address;
     }
 }
 
