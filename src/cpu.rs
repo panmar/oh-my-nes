@@ -1,3 +1,5 @@
+// TODO: Remove me
+#![allow(dead_code)]
 use crate::memory::Address;
 
 use super::memory::Memory;
@@ -38,6 +40,7 @@ struct Instruction {
 
 #[derive(Clone, Copy)]
 enum AddressingMode {
+    Accumulator,
     Implicit,
     Immidiate,
     ZeroPage,
@@ -81,6 +84,7 @@ impl Cpu {
         let arg_address = self.program_counter + 1;
         use AddressingMode::*;
         match mode {
+            Accumulator => None,
             Implicit => None,
             Immidiate => {
                 return Some(arg_address);
@@ -152,10 +156,294 @@ impl Cpu {
     }
 }
 
+const UNDEFINED_INSTRUCTION: Instruction = Instruction {
+    mnemonic: "UDE",
+    opcode: 0x00,
+    mode: AddressingMode::Implicit,
+    bytesize: 1,
+    cycles: 0,
+    handler: Cpu::ude,
+};
+
+macro_rules! undefined_instruction {
+    ($opcode: literal) => {
+        Instruction { mnemonic: "UDE", opcode: $opcode, mode: AddressingMode::Implicit, bytesize: 1, cycles: 0, handler: Cpu::ude }
+    }
+}
+
 #[rustfmt::skip]
-const INSTRUCTIONS: [Instruction; 2] = [
+const INSTRUCTIONS: [Instruction; 256] = [
     Instruction { mnemonic: "BRK", opcode: 0x00, mode: AddressingMode::Implicit, bytesize: 1, cycles: 7, handler: Cpu::brk },
     Instruction { mnemonic: "ORA($NN,X)", opcode: 0x01, mode: AddressingMode::IndirectX, bytesize: 2, cycles: 6, handler: Cpu::ora },
+    undefined_instruction!(0x02),
+    undefined_instruction!(0x03),
+    undefined_instruction!(0x04),
+    Instruction { mnemonic: "ORA $NN", opcode: 0x05, mode: AddressingMode::ZeroPage, bytesize: 0, cycles: 0, handler: Cpu::ora },
+    Instruction { mnemonic: "ASL $NN", opcode: 0x06, mode: AddressingMode::ZeroPage, bytesize: 0, cycles: 0, handler: Cpu::asl },
+    undefined_instruction!(0x07),
+    Instruction { mnemonic: "PHP", opcode: 0x08, mode: AddressingMode::Implicit, bytesize: 0, cycles: 0, handler: Cpu::php },
+    Instruction { mnemonic: "ORA #$NN", opcode: 0x09, mode: AddressingMode::Immidiate, bytesize: 0, cycles: 0, handler: Cpu::ora },
+    Instruction { mnemonic: "ASL A", opcode: 0x0A, mode: AddressingMode::Accumulator, bytesize: 0, cycles: 0, handler: Cpu::asl },
+    undefined_instruction!(0x0B),
+    undefined_instruction!(0x0C),
+    Instruction { mnemonic: "ORA $NNNN", opcode: 0x0D, mode: AddressingMode::Absolute, bytesize: 0, cycles: 0, handler: Cpu::ora },
+    Instruction { mnemonic: "ASL $NNNN", opcode: 0x0E, mode: AddressingMode::Absolute, bytesize: 0, cycles: 0, handler: Cpu::asl },
+    undefined_instruction!(0x0F),
+
+    Instruction { mnemonic: "BPL $NN", opcode: 0x10, mode: AddressingMode::Relative, bytesize: 0, cycles: 0, handler: Cpu::bpl },
+    Instruction { mnemonic: "ORA ($NN),Y", opcode: 0x11, mode: AddressingMode::IndirectY, bytesize: 0, cycles: 0, handler: Cpu::ora },
+    undefined_instruction!(0x12),
+    undefined_instruction!(0x13),
+    undefined_instruction!(0x14),
+    Instruction { mnemonic: "ORA $NN,X", opcode: 0x15, mode: AddressingMode::ZeroPageX, bytesize: 0, cycles: 0, handler: Cpu::ora },
+    Instruction { mnemonic: "ASL $NN,X", opcode: 0x16, mode: AddressingMode::ZeroPageX, bytesize: 0, cycles: 0, handler: Cpu::asl },
+    undefined_instruction!(0x17),
+    Instruction { mnemonic: "CLC", opcode: 0x18, mode: AddressingMode::Implicit, bytesize: 0, cycles: 0, handler: Cpu::clc },
+    Instruction { mnemonic: "ORA $NNNN,Y", opcode: 0x19, mode: AddressingMode::AbsoluteY, bytesize: 0, cycles: 0, handler: Cpu::ora },
+    undefined_instruction!(0x1A),
+    undefined_instruction!(0x1B),
+    undefined_instruction!(0x1C),
+    Instruction { mnemonic: "ORA $NNNN,X", opcode: 0x1D, mode: AddressingMode::AbsoluteX, bytesize: 0, cycles: 0, handler: Cpu::ora },
+    Instruction { mnemonic: "ASL $NNNN,X", opcode: 0x1E, mode: AddressingMode::AbsoluteX, bytesize: 0, cycles: 0, handler: Cpu::asl },
+    undefined_instruction!(0x1F),
+
+    Instruction { mnemonic: "JSR $NNNN", opcode: 0x20, mode: AddressingMode::Absolute, bytesize: 0, cycles: 0, handler: Cpu::jsr },
+    Instruction { mnemonic: "AND ($NN,X)", opcode: 0x21, mode: AddressingMode::IndirectX, bytesize: 0, cycles: 0, handler: Cpu::and },
+    undefined_instruction!(0x22),
+    undefined_instruction!(0x23),
+    Instruction { mnemonic: "BIT $NN", opcode: 0x24, mode: AddressingMode::ZeroPage, bytesize: 0, cycles: 0, handler: Cpu::bit },
+    Instruction { mnemonic: "AND $NN", opcode: 0x25, mode: AddressingMode::ZeroPage, bytesize: 0, cycles: 0, handler: Cpu::and },
+    Instruction { mnemonic: "ROL $NN", opcode: 0x26, mode: AddressingMode::ZeroPage, bytesize: 0, cycles: 0, handler: Cpu::rol },
+    undefined_instruction!(0x27),
+    Instruction { mnemonic: "PLP", opcode: 0x28, mode: AddressingMode::Implicit, bytesize: 0, cycles: 0, handler: Cpu::plp },
+    Instruction { mnemonic: "AND #$NN", opcode: 0x29, mode: AddressingMode::Immidiate, bytesize: 0, cycles: 0, handler: Cpu::and },
+    Instruction { mnemonic: "ROL A", opcode: 0x2A, mode: AddressingMode::Accumulator, bytesize: 0, cycles: 0, handler: Cpu::rol },
+    undefined_instruction!(0x2B),
+    Instruction { mnemonic: "BIT $NNNN", opcode: 0x2C, mode: AddressingMode::Absolute, bytesize: 0, cycles: 0, handler: Cpu::bit },
+    Instruction { mnemonic: "AND $NNNN", opcode: 0x2D, mode: AddressingMode::Absolute, bytesize: 0, cycles: 0, handler: Cpu::and },
+    Instruction { mnemonic: "ROL $NNNN", opcode: 0x2E, mode: AddressingMode::Absolute, bytesize: 0, cycles: 0, handler: Cpu::rol },
+    undefined_instruction!(0x2F),
+
+    Instruction { mnemonic: "BMI $NN", opcode: 0x30, mode: AddressingMode::Relative, bytesize: 0, cycles: 0, handler: Cpu::bmi },
+    Instruction { mnemonic: "AND ($NN),Y", opcode: 0x31, mode: AddressingMode::IndirectY, bytesize: 0, cycles: 0, handler: Cpu::and },
+    undefined_instruction!(0x32),
+    undefined_instruction!(0x33),
+    undefined_instruction!(0x34),
+    Instruction { mnemonic: "AND $NN,X", opcode: 0x35, mode: AddressingMode::ZeroPageX, bytesize: 0, cycles: 0, handler: Cpu::and },
+    Instruction { mnemonic: "ROL $NN,X", opcode: 0x36, mode: AddressingMode::ZeroPageX, bytesize: 0, cycles: 0, handler: Cpu::rol },
+    undefined_instruction!(0x37),
+    Instruction { mnemonic: "SEC", opcode: 0x38, mode: AddressingMode::Implicit, bytesize: 0, cycles: 0, handler: Cpu::sec },
+    Instruction { mnemonic: "AND $NNNN,Y", opcode: 0x39, mode: AddressingMode::AbsoluteY, bytesize: 0, cycles: 0, handler: Cpu::and },
+    undefined_instruction!(0x3A),
+    undefined_instruction!(0x3B),
+    undefined_instruction!(0x3C),
+    Instruction { mnemonic: "AND $NNNN,X", opcode: 0x3D, mode: AddressingMode::AbsoluteX, bytesize: 0, cycles: 0, handler: Cpu::and },
+    Instruction { mnemonic: "ROL $NNNN,X", opcode: 0x3E, mode: AddressingMode::AbsoluteX, bytesize: 0, cycles: 0, handler: Cpu::rol },
+    undefined_instruction!(0x3F),
+
+    Instruction { mnemonic: "RTI", opcode: 0x40, mode: AddressingMode::Implicit, bytesize: 0, cycles: 0, handler: Cpu::rti },
+    Instruction { mnemonic: "EOR ($NN,X)", opcode: 0x41, mode: AddressingMode::IndirectX, bytesize: 0, cycles: 0, handler: Cpu::eor },
+    undefined_instruction!(0x42),
+    undefined_instruction!(0x43),
+    undefined_instruction!(0x44),
+    Instruction { mnemonic: "EOR $NN", opcode: 0x45, mode: AddressingMode::ZeroPage, bytesize: 0, cycles: 0, handler: Cpu::eor },
+    Instruction { mnemonic: "LSR $NN", opcode: 0x46, mode: AddressingMode::ZeroPage, bytesize: 0, cycles: 0, handler: Cpu::lsr },
+    undefined_instruction!(0x47),
+    Instruction { mnemonic: "PHA", opcode: 0x48, mode: AddressingMode::Implicit, bytesize: 0, cycles: 0, handler: Cpu::pha },
+    Instruction { mnemonic: "EOR #$NN", opcode: 0x49, mode: AddressingMode::Immidiate, bytesize: 0, cycles: 0, handler: Cpu::eor },
+    Instruction { mnemonic: "LSR A", opcode: 0x4A, mode: AddressingMode::Accumulator, bytesize: 0, cycles: 0, handler: Cpu::lsr },
+    undefined_instruction!(0x4B),
+    Instruction { mnemonic: "JMP $NNNN", opcode: 0x4C, mode: AddressingMode::Absolute, bytesize: 0, cycles: 0, handler: Cpu::jmp },
+    Instruction { mnemonic: "EOR $NNNN", opcode: 0x4D, mode: AddressingMode::Absolute, bytesize: 0, cycles: 0, handler: Cpu::eor },
+    Instruction { mnemonic: "LSR $NNNN", opcode: 0x4E, mode: AddressingMode::Absolute, bytesize: 0, cycles: 0, handler: Cpu::lsr },
+    undefined_instruction!(0x4F),
+
+    Instruction { mnemonic: "BVC $NN", opcode: 0x50, mode: AddressingMode::Relative, bytesize: 0, cycles: 0, handler: Cpu::bvc },
+    Instruction { mnemonic: "EOR ($NN),Y", opcode: 0x51, mode: AddressingMode::IndirectY, bytesize: 0, cycles: 0, handler: Cpu::eor },
+    undefined_instruction!(0x52),
+    undefined_instruction!(0x53),
+    undefined_instruction!(0x54),
+    Instruction { mnemonic: "EOR $NN,X", opcode: 0x55, mode: AddressingMode::ZeroPageX, bytesize: 0, cycles: 0, handler: Cpu::eor },
+    Instruction { mnemonic: "LSR $NN,X", opcode: 0x56, mode: AddressingMode::ZeroPageX, bytesize: 0, cycles: 0, handler: Cpu::lsr },
+    undefined_instruction!(0x57),
+    Instruction { mnemonic: "CLI", opcode: 0x58, mode: AddressingMode::Implicit, bytesize: 0, cycles: 0, handler: Cpu::cli },
+    Instruction { mnemonic: "EOR $NNNN,Y", opcode: 0x59, mode: AddressingMode::AbsoluteY, bytesize: 0, cycles: 0, handler: Cpu::eor },
+    undefined_instruction!(0x5A),
+    undefined_instruction!(0x5B),
+    undefined_instruction!(0x5C),
+    Instruction { mnemonic: "EOR $NNNN,X", opcode: 0x5D, mode: AddressingMode::AbsoluteX, bytesize: 0, cycles: 0, handler: Cpu::eor },
+    Instruction { mnemonic: "LSR $NNNN,X", opcode: 0x5E, mode: AddressingMode::AbsoluteX, bytesize: 0, cycles: 0, handler: Cpu::lsr },
+    undefined_instruction!(0x5F),
+
+    Instruction { mnemonic: "RTS", opcode: 0x60, mode: AddressingMode::Implicit, bytesize: 0, cycles: 0, handler: Cpu::rts },
+    Instruction { mnemonic: "ADC ($NN,X)", opcode: 0x61, mode: AddressingMode::IndirectX, bytesize: 0, cycles: 0, handler: Cpu::adc },
+    undefined_instruction!(0x62),
+    undefined_instruction!(0x63),
+    undefined_instruction!(0x64),
+    Instruction { mnemonic: "ADC $NN", opcode: 0x65, mode: AddressingMode::ZeroPage, bytesize: 0, cycles: 0, handler: Cpu::adc },
+    Instruction { mnemonic: "ROR $NN", opcode: 0x66, mode: AddressingMode::ZeroPage, bytesize: 0, cycles: 0, handler: Cpu::ror },
+    undefined_instruction!(0x67),
+    Instruction { mnemonic: "PLA", opcode: 0x68, mode: AddressingMode::ZeroPage, bytesize: 0, cycles: 0, handler: Cpu::pla },
+    Instruction { mnemonic: "ADC #$NN", opcode: 0x69, mode: AddressingMode::Immidiate, bytesize: 0, cycles: 0, handler: Cpu::adc },
+    Instruction { mnemonic: "ROR", opcode: 0x6A, mode: AddressingMode::Accumulator, bytesize: 0, cycles: 0, handler: Cpu::ror },
+    undefined_instruction!(0x6B),
+    Instruction { mnemonic: "JMP $NN", opcode: 0x6C, mode: AddressingMode::Indirect, bytesize: 0, cycles: 0, handler: Cpu::jmp },
+    Instruction { mnemonic: "ADC $NNNN", opcode: 0x6D, mode: AddressingMode::Absolute, bytesize: 0, cycles: 0, handler: Cpu::adc },
+    Instruction { mnemonic: "ROR $NNNN,X", opcode: 0x6E, mode: AddressingMode::AbsoluteX, bytesize: 0, cycles: 0, handler: Cpu::ror },
+    undefined_instruction!(0x6F),
+
+    Instruction { mnemonic: "BVS $NN", opcode: 0x70, mode: AddressingMode::Relative, bytesize: 0, cycles: 0, handler: Cpu::bvs },
+    Instruction { mnemonic: "ADC ($NN),Y", opcode: 0x71, mode: AddressingMode::IndirectY, bytesize: 0, cycles: 0, handler: Cpu::adc },
+    undefined_instruction!(0x72),
+    undefined_instruction!(0x73),
+    undefined_instruction!(0x74),
+    Instruction { mnemonic: "ADC $NN,X", opcode: 0x75, mode: AddressingMode::ZeroPageX, bytesize: 0, cycles: 0, handler: Cpu::adc },
+    Instruction { mnemonic: "ROR $NN,X", opcode: 0x76, mode: AddressingMode::ZeroPageX, bytesize: 0, cycles: 0, handler: Cpu::ror },
+    undefined_instruction!(0x77),
+    Instruction { mnemonic: "SEI", opcode: 0x78, mode: AddressingMode::Implicit, bytesize: 0, cycles: 0, handler: Cpu::sei },
+    Instruction { mnemonic: "ADC $NNNN,Y", opcode: 0x79, mode: AddressingMode::AbsoluteY, bytesize: 0, cycles: 0, handler: Cpu::adc },
+    undefined_instruction!(0x7A),
+    undefined_instruction!(0x7B),
+    undefined_instruction!(0x7C),
+    Instruction { mnemonic: "ADC $NNNN,X", opcode: 0x7D, mode: AddressingMode::AbsoluteX, bytesize: 0, cycles: 0, handler: Cpu::adc },
+    Instruction { mnemonic: "ROR $NNNN", opcode: 0x7E, mode: AddressingMode::Absolute, bytesize: 0, cycles: 0, handler: Cpu::ror },
+    undefined_instruction!(0x7F),
+
+    undefined_instruction!(0x80),
+    Instruction { mnemonic: "STA ($NN,X)", opcode: 0x81, mode: AddressingMode::Indirect, bytesize: 0, cycles: 0, handler: Cpu::sta },
+    undefined_instruction!(0x82),
+    undefined_instruction!(0x83),
+    Instruction { mnemonic: "STY $NN", opcode: 0x84, mode: AddressingMode::ZeroPage, bytesize: 0, cycles: 0, handler: Cpu::sty },
+    Instruction { mnemonic: "STA $NN", opcode: 0x85, mode: AddressingMode::ZeroPage, bytesize: 0, cycles: 0, handler: Cpu::sta },
+    Instruction { mnemonic: "STX $NN", opcode: 0x86, mode: AddressingMode::ZeroPage, bytesize: 0, cycles: 0, handler: Cpu::stx },
+    undefined_instruction!(0x87),
+    Instruction { mnemonic: "DEY", opcode: 0x88, mode: AddressingMode::Implicit, bytesize: 0, cycles: 0, handler: Cpu::dey },
+    undefined_instruction!(0x89),
+    Instruction { mnemonic: "TXA", opcode: 0x8A, mode: AddressingMode::Implicit, bytesize: 0, cycles: 0, handler: Cpu::txa },
+    undefined_instruction!(0x8B),
+    Instruction { mnemonic: "STY $NNNN", opcode: 0x8C, mode: AddressingMode::Absolute, bytesize: 0, cycles: 0, handler: Cpu::sty },
+    Instruction { mnemonic: "STA $NNNN", opcode: 0x8D, mode: AddressingMode::Absolute, bytesize: 0, cycles: 0, handler: Cpu::sta },
+    Instruction { mnemonic: "STX $NNNN", opcode: 0x8E, mode: AddressingMode::Absolute, bytesize: 0, cycles: 0, handler: Cpu::stx },
+    undefined_instruction!(0x8F),
+
+    Instruction { mnemonic: "BCC $NN", opcode: 0x90, mode: AddressingMode::Relative, bytesize: 0, cycles: 0, handler: Cpu::bcc },
+    Instruction { mnemonic: "STA ($NN),Y", opcode: 0x91, mode: AddressingMode::IndirectY, bytesize: 0, cycles: 0, handler: Cpu::sta },
+    undefined_instruction!(0x92),
+    undefined_instruction!(0x93),
+    Instruction { mnemonic: "STY $NN,X", opcode: 0x94, mode: AddressingMode::ZeroPageX, bytesize: 0, cycles: 0, handler: Cpu::sty },
+    Instruction { mnemonic: "STA $NN,X", opcode: 0x95, mode: AddressingMode::ZeroPageX, bytesize: 0, cycles: 0, handler: Cpu::sta },
+    Instruction { mnemonic: "STX $NN,Y", opcode: 0x96, mode: AddressingMode::ZeroPageY, bytesize: 0, cycles: 0, handler: Cpu::stx },
+    undefined_instruction!(0x97),
+    Instruction { mnemonic: "TYA", opcode: 0x98, mode: AddressingMode::Implicit, bytesize: 0, cycles: 0, handler: Cpu::tya },
+    Instruction { mnemonic: "STA $NNNN,Y", opcode: 0x99, mode: AddressingMode::AbsoluteY, bytesize: 0, cycles: 0, handler: Cpu::sta },
+    Instruction { mnemonic: "TXS", opcode: 0x9A, mode: AddressingMode::Implicit, bytesize: 0, cycles: 0, handler: Cpu::txs },
+    undefined_instruction!(0x9B),
+    undefined_instruction!(0x9C),
+    Instruction { mnemonic: "STA $NNNN,X", opcode: 0x9D, mode: AddressingMode::AbsoluteX, bytesize: 0, cycles: 0, handler: Cpu::sta },
+    undefined_instruction!(0x9E),
+    undefined_instruction!(0x9F),
+
+    Instruction { mnemonic: "LDY #$NN", opcode: 0xA0, mode: AddressingMode::Immidiate, bytesize: 0, cycles: 0, handler: Cpu::ldy },
+    Instruction { mnemonic: "LDA ($NN,X)", opcode: 0xA1, mode: AddressingMode::IndirectX, bytesize: 0, cycles: 0, handler: Cpu::lda },
+    Instruction { mnemonic: "LDX #$NN", opcode: 0xA2, mode: AddressingMode::Immidiate, bytesize: 0, cycles: 0, handler: Cpu::ldx },
+    undefined_instruction!(0xA3),
+    Instruction { mnemonic: "LDY $NN", opcode: 0xA4, mode: AddressingMode::ZeroPage, bytesize: 0, cycles: 0, handler: Cpu::ldy },
+    Instruction { mnemonic: "LDA $NN", opcode: 0xA5, mode: AddressingMode::ZeroPage, bytesize: 0, cycles: 0, handler: Cpu::lda },
+    Instruction { mnemonic: "LDX $NN", opcode: 0xA6, mode: AddressingMode::ZeroPage, bytesize: 0, cycles: 0, handler: Cpu::ldx },
+    undefined_instruction!(0xA7),
+    Instruction { mnemonic: "TAY", opcode: 0xA8, mode: AddressingMode::Implicit, bytesize: 0, cycles: 0, handler: Cpu::tay },
+    Instruction { mnemonic: "LDA #$NN", opcode: 0xA9, mode: AddressingMode::Immidiate, bytesize: 0, cycles: 0, handler: Cpu::lda },
+    Instruction { mnemonic: "TAX", opcode: 0xAA, mode: AddressingMode::Implicit, bytesize: 0, cycles: 0, handler: Cpu::tax },
+    undefined_instruction!(0xAB),
+    Instruction { mnemonic: "LDY $NNNN", opcode: 0xAC, mode: AddressingMode::Absolute, bytesize: 0, cycles: 0, handler: Cpu::ldy },
+    Instruction { mnemonic: "LDA $NNNN", opcode: 0xAD, mode: AddressingMode::Absolute, bytesize: 0, cycles: 0, handler: Cpu::lda },
+    Instruction { mnemonic: "LDX $NNNN", opcode: 0xAE, mode: AddressingMode::Absolute, bytesize: 0, cycles: 0, handler: Cpu::ldx },
+    undefined_instruction!(0xAF),
+
+    Instruction { mnemonic: "BCS $NN", opcode: 0xB0, mode: AddressingMode::Relative, bytesize: 0, cycles: 0, handler: Cpu::bcs },
+    Instruction { mnemonic: "LDA ($NN),Y", opcode: 0xB1, mode: AddressingMode::IndirectY, bytesize: 0, cycles: 0, handler: Cpu::lda },
+    undefined_instruction!(0xB2),
+    undefined_instruction!(0xB3),
+    Instruction { mnemonic: "LDY $NN,X", opcode: 0xB4, mode: AddressingMode::ZeroPageX, bytesize: 0, cycles: 0, handler: Cpu::ldy },
+    Instruction { mnemonic: "LDA $NN,X", opcode: 0xB5, mode: AddressingMode::ZeroPageX, bytesize: 0, cycles: 0, handler: Cpu::lda },
+    Instruction { mnemonic: "LDX $NN,Y", opcode: 0xB6, mode: AddressingMode::ZeroPageY, bytesize: 0, cycles: 0, handler: Cpu::ldx },
+    undefined_instruction!(0xB7),
+    Instruction { mnemonic: "CLV", opcode: 0xB8, mode: AddressingMode::Implicit, bytesize: 0, cycles: 0, handler: Cpu::clv },
+    Instruction { mnemonic: "LDA", opcode: 0xB9, mode: AddressingMode::AbsoluteY, bytesize: 0, cycles: 0, handler: Cpu::lda },
+    Instruction { mnemonic: "TSX", opcode: 0xBA, mode: AddressingMode::Implicit, bytesize: 0, cycles: 0, handler: Cpu::tsx },
+    undefined_instruction!(0xBB),
+    Instruction { mnemonic: "LDY $NNNN,X", opcode: 0xBC, mode: AddressingMode::AbsoluteX, bytesize: 0, cycles: 0, handler: Cpu::ldy },
+    Instruction { mnemonic: "LDA $NNNN,X", opcode: 0xBD, mode: AddressingMode::AbsoluteX, bytesize: 0, cycles: 0, handler: Cpu::lda },
+    Instruction { mnemonic: "LDX $NNNN,Y", opcode: 0xBE, mode: AddressingMode::AbsoluteY, bytesize: 0, cycles: 0, handler: Cpu::ldx },
+    undefined_instruction!(0xBF),
+
+    Instruction { mnemonic: "CPY #$NN", opcode: 0xC0, mode: AddressingMode::Immidiate, bytesize: 0, cycles: 0, handler: Cpu::cpy },
+    Instruction { mnemonic: "CMP ($NN,X)", opcode: 0xC1, mode: AddressingMode::IndirectX, bytesize: 0, cycles: 0, handler: Cpu::cmp },
+    undefined_instruction!(0xC2),
+    undefined_instruction!(0xC3),
+    Instruction { mnemonic: "CPY $NN", opcode: 0xC4, mode: AddressingMode::ZeroPage, bytesize: 0, cycles: 0, handler: Cpu::cpy },
+    Instruction { mnemonic: "CMP $NN", opcode: 0xC5, mode: AddressingMode::ZeroPage, bytesize: 0, cycles: 0, handler: Cpu::cmp },
+    Instruction { mnemonic: "DEC $NN", opcode: 0xC6, mode: AddressingMode::ZeroPage, bytesize: 0, cycles: 0, handler: Cpu::dec },
+    undefined_instruction!(0xC7),
+    Instruction { mnemonic: "INY", opcode: 0xC8, mode: AddressingMode::Implicit, bytesize: 0, cycles: 0, handler: Cpu::iny },
+    Instruction { mnemonic: "CMP #$NN", opcode: 0xC9, mode: AddressingMode::Immidiate, bytesize: 0, cycles: 0, handler: Cpu::cmp },
+    Instruction { mnemonic: "DEX", opcode: 0xCA, mode: AddressingMode::Implicit, bytesize: 0, cycles: 0, handler: Cpu::dex },
+    undefined_instruction!(0xCB),
+    Instruction { mnemonic: "CPY $NNNN", opcode: 0xCC, mode: AddressingMode::Absolute, bytesize: 0, cycles: 0, handler: Cpu::cpy },
+    Instruction { mnemonic: "CMP $NNNN", opcode: 0xCD, mode: AddressingMode::Absolute, bytesize: 0, cycles: 0, handler: Cpu::cmp },
+    Instruction { mnemonic: "DEC $NNNN", opcode: 0xCE, mode: AddressingMode::Absolute, bytesize: 0, cycles: 0, handler: Cpu::dec },
+    undefined_instruction!(0xCF),
+
+    Instruction { mnemonic: "BNE $NN", opcode: 0xD0, mode: AddressingMode::Relative, bytesize: 0, cycles: 0, handler: Cpu::bne },
+    Instruction { mnemonic: "CMP ($NN),Y", opcode: 0xD1, mode: AddressingMode::IndirectY, bytesize: 0, cycles: 0, handler: Cpu::cmp },
+    undefined_instruction!(0xD2),
+    undefined_instruction!(0xD3),
+    undefined_instruction!(0xD4),
+    Instruction { mnemonic: "CMP $NN,X", opcode: 0xD5, mode: AddressingMode::ZeroPageX, bytesize: 0, cycles: 0, handler: Cpu::cmp },
+    Instruction { mnemonic: "DEC $NN,X", opcode: 0xD6, mode: AddressingMode::ZeroPageX, bytesize: 0, cycles: 0, handler: Cpu::dec },
+    undefined_instruction!(0xD7),
+    Instruction { mnemonic: "CLD", opcode: 0xD8, mode: AddressingMode::Implicit, bytesize: 0, cycles: 0, handler: Cpu::cld },
+    Instruction { mnemonic: "CMP $NNNN,Y", opcode: 0xD9, mode: AddressingMode::AbsoluteY, bytesize: 0, cycles: 0, handler: Cpu::cmp },
+    undefined_instruction!(0xDA),
+    undefined_instruction!(0xDB),
+    undefined_instruction!(0xDC),
+    Instruction { mnemonic: "CMP $NNNN,X", opcode: 0xDD, mode: AddressingMode::AbsoluteX, bytesize: 0, cycles: 0, handler: Cpu::cmp },
+    Instruction { mnemonic: "DEC $NNNN,X", opcode: 0xDE, mode: AddressingMode::AbsoluteX, bytesize: 0, cycles: 0, handler: Cpu::dec },
+    undefined_instruction!(0xDF),
+
+    Instruction { mnemonic: "CPX #$NN", opcode: 0xE0, mode: AddressingMode::Immidiate, bytesize: 0, cycles: 0, handler: Cpu::cpx },
+    Instruction { mnemonic: "SBC ($NN,X)", opcode: 0xE1, mode: AddressingMode::IndirectX, bytesize: 0, cycles: 0, handler: Cpu::sbc },
+    undefined_instruction!(0xE2),
+    undefined_instruction!(0xE3),
+    Instruction { mnemonic: "CPX $NN", opcode: 0xE4, mode: AddressingMode::ZeroPage, bytesize: 0, cycles: 0, handler: Cpu::cpx },
+    Instruction { mnemonic: "SBC $NN", opcode: 0xE5, mode: AddressingMode::ZeroPage, bytesize: 0, cycles: 0, handler: Cpu::sbc },
+    Instruction { mnemonic: "INC $NN", opcode: 0xE6, mode: AddressingMode::ZeroPage, bytesize: 0, cycles: 0, handler: Cpu::inc },
+    undefined_instruction!(0xE7),
+    Instruction { mnemonic: "INX", opcode: 0xE8, mode: AddressingMode::Implicit, bytesize: 0, cycles: 0, handler: Cpu::inx },
+    Instruction { mnemonic: "SBC #$NN", opcode: 0xE9, mode: AddressingMode::Immidiate, bytesize: 0, cycles: 0, handler: Cpu::sbc },
+    Instruction { mnemonic: "NOP", opcode: 0xEA, mode: AddressingMode::Implicit, bytesize: 0, cycles: 0, handler: Cpu::nop },
+    undefined_instruction!(0xEB),
+    Instruction { mnemonic: "CPX $NNNN", opcode: 0xEC, mode: AddressingMode::Absolute, bytesize: 0, cycles: 0, handler: Cpu::cpx },
+    Instruction { mnemonic: "SBC $NNNN", opcode: 0xED, mode: AddressingMode::Absolute, bytesize: 0, cycles: 0, handler: Cpu::sbc },
+    Instruction { mnemonic: "INC $NNNN", opcode: 0xEE, mode: AddressingMode::Absolute, bytesize: 0, cycles: 0, handler: Cpu::inc },
+    undefined_instruction!(0xEF),
+
+    Instruction { mnemonic: "BEQ $NN", opcode: 0xF0, mode: AddressingMode::Relative, bytesize: 0, cycles: 0, handler: Cpu::beq },
+    Instruction { mnemonic: "SBC ($NN),Y", opcode: 0xF1, mode: AddressingMode::IndirectY, bytesize: 0, cycles: 0, handler: Cpu::sbc },
+    undefined_instruction!(0xF2),
+    undefined_instruction!(0xF3),
+    undefined_instruction!(0xF4),
+    Instruction { mnemonic: "SBC $NN,X", opcode: 0xF5, mode: AddressingMode::ZeroPageX, bytesize: 0, cycles: 0, handler: Cpu::sbc },
+    Instruction { mnemonic: "INC $NN,X", opcode: 0xF6, mode: AddressingMode::ZeroPageX, bytesize: 0, cycles: 0, handler: Cpu::inc },
+    undefined_instruction!(0xF7),
+    Instruction { mnemonic: "SED", opcode: 0xF8, mode: AddressingMode::Implicit, bytesize: 0, cycles: 0, handler: Cpu::sed },
+    Instruction { mnemonic: "SBC $NNNN,Y", opcode: 0xF9, mode: AddressingMode::AbsoluteY, bytesize: 0, cycles: 0, handler: Cpu::sbc },
+    undefined_instruction!(0xFA),
+    undefined_instruction!(0xFB),
+    undefined_instruction!(0xFC),
+    Instruction { mnemonic: "SBC $NNNN,X", opcode: 0xFD, mode: AddressingMode::AbsoluteX, bytesize: 0, cycles: 0, handler: Cpu::sbc },
+    Instruction { mnemonic: "INC $NNNN,X", opcode: 0xFE, mode: AddressingMode::AbsoluteX, bytesize: 0, cycles: 0, handler: Cpu::inc },
+    undefined_instruction!(0xFF),
 ];
 
 impl Cpu {
@@ -361,7 +649,7 @@ impl Cpu {
         self.program_counter = arg as u16;
     }
 
-    fn jrs(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
+    fn jsr(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
         let arg = memory.read_u8(arg_address.unwrap());
 
         // TODO(panmar): Do we change stack pointer here?
@@ -392,7 +680,7 @@ impl Cpu {
             .set(Flags::NEGATIVE, self.y_index & 0b1000_0000 != 0);
     }
 
-    fn lhr(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
+    fn lsr(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
         match arg_address {
             Some(address) => {
                 let arg = memory.read_u8(address);
@@ -583,6 +871,10 @@ impl Cpu {
     fn tya(&mut self, _memory: &mut Memory, _arg_address: Option<Address>) {
         self.set_accumulator(self.y_index);
     }
+
+    fn ude(&mut self, _memory: &mut Memory, _arg_address: Option<Address>) {
+        panic!("Undefined instruction");
+    }
 }
 
 #[cfg(test)]
@@ -648,10 +940,7 @@ mod test {
         cpu.brk(&mut memory, None);
 
         // then
-        assert_eq!(
-            memory.stack(&mut cpu.stack_pointer).pop_u8(),
-            0b10111010
-        );
+        assert_eq!(memory.stack(&mut cpu.stack_pointer).pop_u8(), 0b10111010);
         assert_eq!(
             memory.stack(&mut cpu.stack_pointer).pop_u16(),
             cpu.program_counter
