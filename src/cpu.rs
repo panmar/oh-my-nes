@@ -885,11 +885,11 @@ impl Cpu {
 mod test {
     use super::*;
 
-    fn try_set_argument(memory: &mut Memory, value: Option<u8>) -> Option<Address> {
-        match value {
-            Some(value) => {
+    fn try_set_argument(memory: &mut Memory, arg: Option<u8>) -> Option<Address> {
+        match arg {
+            Some(arg_value) => {
                 let address = 0x0242;
-                memory.write_u8(address, value);
+                memory.write_u8(address, arg_value);
                 return Some(address);
             }
             None => return None,
