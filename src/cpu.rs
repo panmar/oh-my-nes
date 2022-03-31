@@ -885,15 +885,20 @@ impl Cpu {
 mod test {
     use super::*;
 
+    const ARGUMENT_ADDRESS: Address = 0x0242;
+
     fn try_set_argument(memory: &mut Memory, arg: Option<u8>) -> Option<Address> {
         match arg {
             Some(arg_value) => {
-                let address = 0x0242;
-                memory.write_u8(address, arg_value);
-                return Some(address);
+                memory.write_u8(ARGUMENT_ADDRESS, arg_value);
+                return Some(ARGUMENT_ADDRESS);
             }
             None => return None,
         }
+    }
+
+    fn get_argument(memory: &Memory) -> u8 {
+        return memory.read_u8(ARGUMENT_ADDRESS);
     }
 
     macro_rules! test_instruction {
@@ -913,6 +918,20 @@ mod test {
     }
 
     #[test]
+    fn should_execute_adc() {
+        test_instruction!(
+            Cpu::adc,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.accumulator = 0x77;
+            },
+            Some(0x03),
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.accumulator, 0x7A);
+            }
+        );
+    }
+
+    #[test]
     fn should_execute_adc_with_zeroes() {
         test_instruction!(
             Cpu::adc,
@@ -928,21 +947,7 @@ mod test {
     }
 
     #[test]
-    fn should_execute_adc_simple() {
-        test_instruction!(
-            Cpu::adc,
-            |cpu: &mut Cpu, _memory: &mut Memory| {
-                cpu.accumulator = 0x77;
-            },
-            Some(0x03),
-            |cpu: &Cpu, _memory: &Memory| {
-                assert_eq!(cpu.accumulator, 0x7A);
-            }
-        );
-    }
-
-    #[test]
-    fn should_execute_adc_with_overflow() {
+    fn should_execute_adc_with_overflow_and_negative() {
         test_instruction!(
             Cpu::adc,
             |cpu: &mut Cpu, _memory: &mut Memory| {
@@ -968,6 +973,63 @@ mod test {
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.accumulator, 0xFF);
                 assert!(cpu.flags.contains(Flags::NEGATIVE | Flags::CARRY));
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_and() {
+        test_instruction!(
+            Cpu::and,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.accumulator = 0b0110_0111;
+            },
+            Some(0b1100_0101),
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.accumulator, 0b0100_0101);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_and_with_negative() {
+        test_instruction!(
+            Cpu::and,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.accumulator = 0b1111_1111;
+            },
+            Some(0b1000_0111),
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.accumulator, 0b1000_0111);
+                assert!(cpu.flags.contains(Flags::NEGATIVE));
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_and_with_zero() {
+        test_instruction!(
+            Cpu::and,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.accumulator = 0b1010_0101;
+            },
+            Some(0b0101_1010),
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.accumulator, 0b0000_0000);
+                assert!(cpu.flags.contains(Flags::ZERO));
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_asl() {
+        test_instruction!(
+            Cpu::asl,
+            |_cpu: &mut Cpu, _memory: &mut Memory| {},
+            Some(0b0101_0101),
+            |cpu: &Cpu, memory: &Memory| {
+                assert_eq!(get_argument(memory), 0b1010_1010);
+                assert_eq!(cpu.flags.contains(Flags::CARRY), false);
             }
         );
     }
