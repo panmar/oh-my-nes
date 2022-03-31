@@ -885,69 +885,90 @@ impl Cpu {
 mod test {
     use super::*;
 
-    fn set_operand(memory: &mut Memory, value: u8) -> Option<Address> {
-        let address = 0x0042;
-        memory.write_u8(address, value);
-        return Some(address);
+    fn try_set_argument(memory: &mut Memory, value: Option<u8>) -> Option<Address> {
+        match value {
+            Some(value) => {
+                let address = 0x0242;
+                memory.write_u8(address, value);
+                return Some(address);
+            }
+            None => return None,
+        }
     }
 
-    #[test]
-    fn should_execute_adc() {
-        fn test_adc(
-            accumulator: u8,
-            opperand: u8,
-            carry_flag: bool,
-            expected_accumulator: u8,
-            expected_flags: Flags,
-        ) {
-            let affected_flags = Flags::CARRY | Flags::ZERO | Flags::OVERFLOW | Flags::NEGATIVE;
-            let expected_unaffected_flags = !affected_flags;
-            let expected_unset_flags = affected_flags.difference(expected_flags);
-
+    macro_rules! test_instruction {
+        ($instruction: expr, $given: expr, $arg: expr, $then: expr) => {
             // given
             let mut cpu = Cpu::new();
-            cpu.accumulator = accumulator;
             let mut memory = Memory::new();
-            let arg_address = set_operand(&mut memory, opperand);
-            cpu.flags.set(Flags::CARRY, carry_flag);
-            let prev_cpu_flags = cpu.flags;
+            $given(&mut cpu, &mut memory);
+            let arg_address = try_set_argument(&mut memory, $arg);
 
             // when
-            cpu.adc(&mut memory, arg_address);
+            $instruction(&mut cpu, &mut memory, arg_address);
 
             // then
-            assert_eq!(cpu.accumulator, expected_accumulator);
-            assert!(cpu.flags.contains(expected_flags));
-            assert!(!cpu.flags.intersects(expected_unset_flags));
-
-            assert_eq!(
-                cpu.flags.intersection(expected_unaffected_flags),
-                prev_cpu_flags.intersection(expected_unaffected_flags),
-            );
-        }
-
-        test_adc(0x00, 0x00, false, 0x00, Flags::ZERO);
-        test_adc(0x77, 0x03, false, 0x7A, Flags::empty());
-        test_adc(0x40, 0x40, false, 0x80, Flags::NEGATIVE | Flags::OVERFLOW);
-        test_adc(0xFF, 0xFF, true, 0xFF, Flags::NEGATIVE | Flags::CARRY);
+            $then(&cpu, &memory);
+        };
     }
 
     #[test]
-    fn should_execute_brk() {
-        // given
-        let mut cpu = Cpu::new();
-        cpu.program_counter = 0x1234;
-        cpu.flags.bits = 0b10111010;
-        let mut memory = Memory::new();
+    fn should_execute_adc_with_zeroes() {
+        test_instruction!(
+            Cpu::adc,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.accumulator = 0x00;
+            },
+            Some(0x00),
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.accumulator, 0x00);
+                assert!(cpu.flags.contains(Flags::ZERO));
+            }
+        );
+    }
 
-        // when
-        cpu.brk(&mut memory, None);
+    #[test]
+    fn should_execute_adc_simple() {
+        test_instruction!(
+            Cpu::adc,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.accumulator = 0x77;
+            },
+            Some(0x03),
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.accumulator, 0x7A);
+            }
+        );
+    }
 
-        // then
-        assert_eq!(memory.stack(&mut cpu.stack_pointer).pop_u8(), 0b10111010);
-        assert_eq!(
-            memory.stack(&mut cpu.stack_pointer).pop_u16(),
-            cpu.program_counter
+    #[test]
+    fn should_execute_adc_with_overflow() {
+        test_instruction!(
+            Cpu::adc,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.accumulator = 0x40;
+            },
+            Some(0x40),
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.accumulator, 0x80);
+                assert!(cpu.flags.contains(Flags::NEGATIVE | Flags::OVERFLOW));
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_adc_with_carry() {
+        test_instruction!(
+            Cpu::adc,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.accumulator = 0xFF;
+                cpu.flags.set(Flags::CARRY, true);
+            },
+            Some(0xFF),
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.accumulator, 0xFF);
+                assert!(cpu.flags.contains(Flags::NEGATIVE | Flags::CARRY));
+            }
         );
     }
 }
