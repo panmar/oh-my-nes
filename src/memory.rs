@@ -34,6 +34,12 @@ impl Memory {
         self.data[effective_address] = value;
     }
 
+    pub fn write_u16(&mut self, address: Address, value: u16) {
+        let bytes = value.to_le_bytes();
+        self.write_u8(address, bytes[0]);
+        self.write_u8(address + 1, bytes[1]);
+    }
+
     fn compute_effective_address(address: Address) -> Address {
         let effective_address = match address {
             0x0800..=0x1FFF => address & 0b00_0111_1111_1111,
