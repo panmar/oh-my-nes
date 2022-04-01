@@ -474,11 +474,10 @@ impl Cpu {
 
     fn asl(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
         fn asl_internal(flags: &mut Flags, arg_ref: &mut u8) {
-            let mut result = *arg_ref << 1;
             flags.set(Flags::CARRY, *arg_ref & 0b1000_0000 != 0);
-            flags.set(Flags::ZERO, result == 0);
-            flags.set(Flags::NEGATIVE, result & 0b1000_0000 != 0);
-            *arg_ref = result;
+            *arg_ref <<= 1;
+            flags.set(Flags::ZERO, *arg_ref == 0);
+            flags.set(Flags::NEGATIVE, *arg_ref & 0b1000_0000 != 0);
         }
 
         let arg_ref = match arg_address {
