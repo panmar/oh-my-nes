@@ -517,9 +517,10 @@ impl Cpu {
         self.flags.set(Flags::OVERFLOW, result & 0b0100_0000 != 0);
     }
 
-    fn bmi(&mut self, _memory: &mut Memory, arg_address: Option<Address>) {
+    fn bmi(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
         if self.flags.contains(Flags::NEGATIVE) {
-            self.program_counter += arg_address.unwrap();
+            let relative_address = memory.read_u8(arg_address.unwrap()) as i8;
+            self.jump(relative_address);
         }
     }
 
@@ -1241,7 +1242,6 @@ mod test {
         );
     }
 
-    
     #[test]
     fn should_execute_bit_with_zero() {
         test_instruction!(
@@ -1255,6 +1255,54 @@ mod test {
                 assert_eq!(cpu.flags.contains(Flags::ZERO), true);
                 assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
                 assert_eq!(cpu.flags.contains(Flags::OVERFLOW), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_bmi_no_negative_flag() {
+        const PROGRAM_COUNTER_ADDRESS: Address = 0x0407;
+        test_instruction!(
+            Cpu::bmi,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
+                cpu.flags.set(Flags::NEGATIVE, false);
+            },
+            Some(51i8 as u8),
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_bmi_with_negative_flag() {
+        const PROGRAM_COUNTER_ADDRESS: Address = 0x0407;
+        test_instruction!(
+            Cpu::bmi,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
+                cpu.flags.set(Flags::NEGATIVE, true);
+            },
+            Some(51i8 as u8),
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS + 51);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_bmi_with_negative_flag_and_negative_offset() {
+        const PROGRAM_COUNTER_ADDRESS: Address = 0x0407;
+        test_instruction!(
+            Cpu::bmi,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
+                cpu.flags.set(Flags::NEGATIVE, true);
+            },
+            Some(-114i8 as u8),
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS - 114);
             }
         );
     }
