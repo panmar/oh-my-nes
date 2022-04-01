@@ -1141,4 +1141,52 @@ mod test {
             }
         );
     }
+
+    #[test]
+    fn should_execute_beq_with_zero() {
+        const PROGRAM_COUNTER_ADDRESS: Address = 0x0407;
+        test_instruction!(
+            Cpu::beq,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
+                cpu.flags.set(Flags::ZERO, true);
+            },
+            Some(51i8 as u8),
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS + 51);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_beq_with_zero_negative_offset() {
+        const PROGRAM_COUNTER_ADDRESS: Address = 0x0407;
+        test_instruction!(
+            Cpu::beq,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
+                cpu.flags.set(Flags::ZERO, true);
+            },
+            Some(-99i8 as u8),
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS - 99);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_beq_no_zero() {
+        const PROGRAM_COUNTER_ADDRESS: Address = 0x0407;
+        test_instruction!(
+            Cpu::beq,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
+                cpu.flags.set(Flags::ZERO, false);
+            },
+            Some(-99i8 as u8),
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS);
+            }
+        );
+    }
 }
