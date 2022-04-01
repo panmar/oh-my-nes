@@ -1686,4 +1686,142 @@ mod test {
             }
         );
     }
+
+    #[test]
+    fn should_execute_dec() {
+        test_instruction!(
+            Cpu::dec,
+            |_cpu: &mut Cpu, _memory: &mut Memory| {},
+            Some(0x71),
+            |cpu: &Cpu, memory: &Memory| {
+                assert_eq!(get_argument(memory), 0x70);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_dec_wrapping() {
+        test_instruction!(
+            Cpu::dec,
+            |_cpu: &mut Cpu, _memory: &mut Memory| {},
+            Some(0x00),
+            |cpu: &Cpu, memory: &Memory| {
+                assert_eq!(get_argument(memory), 0xFF);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), true);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_dec_zero() {
+        test_instruction!(
+            Cpu::dec,
+            |_cpu: &mut Cpu, _memory: &mut Memory| {},
+            Some(0x01),
+            |cpu: &Cpu, memory: &Memory| {
+                assert_eq!(get_argument(memory), 0x00);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), true);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_dex() {
+        test_instruction!(
+            Cpu::dex,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.x_index = 0x61;
+            },
+            None,
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.x_index, 0x60);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_dex_wrapping() {
+        test_instruction!(
+            Cpu::dex,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.x_index = 0x00;
+            },
+            None,
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.x_index, 0xFF);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), true);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_dex_zero() {
+        test_instruction!(
+            Cpu::dex,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.x_index = 0x01;
+            },
+            None,
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.x_index, 0x00);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), true);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_dey() {
+        test_instruction!(
+            Cpu::dey,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.y_index = 0x61;
+            },
+            None,
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.y_index, 0x60);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_dey_wrapping() {
+        test_instruction!(
+            Cpu::dey,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.y_index = 0x00;
+            },
+            None,
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.y_index, 0xFF);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), true);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_dey_zero() {
+        test_instruction!(
+            Cpu::dey,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.y_index = 0x01;
+            },
+            None,
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.y_index, 0x00);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), true);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+            }
+        );
+    }
 }
