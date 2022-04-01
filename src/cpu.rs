@@ -1189,4 +1189,73 @@ mod test {
             }
         );
     }
+
+    #[test]
+    fn should_execute_bit() {
+        test_instruction!(
+            Cpu::bit,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.accumulator = 0b1011_1001;
+            },
+            Some(0b0111_1000),
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.accumulator, 0b1011_1001);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+                assert_eq!(cpu.flags.contains(Flags::OVERFLOW), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_bit_with_negative() {
+        test_instruction!(
+            Cpu::bit,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.accumulator = 0b1011_1001;
+            },
+            Some(0b1111_1000),
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.accumulator, 0b1011_1001);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), true);
+                assert_eq!(cpu.flags.contains(Flags::OVERFLOW), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_bit_with_overflow() {
+        test_instruction!(
+            Cpu::bit,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.accumulator = 0b1111_1001;
+            },
+            Some(0b0111_1000),
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.accumulator, 0b1111_1001);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+                assert_eq!(cpu.flags.contains(Flags::OVERFLOW), true);
+            }
+        );
+    }
+
+    
+    #[test]
+    fn should_execute_bit_with_zero() {
+        test_instruction!(
+            Cpu::bit,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.accumulator = 0b1010_0101;
+            },
+            Some(0b0101_1010),
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.accumulator, 0b1010_0101);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), true);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+                assert_eq!(cpu.flags.contains(Flags::OVERFLOW), false);
+            }
+        );
+    }
 }
