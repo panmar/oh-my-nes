@@ -1045,4 +1045,52 @@ mod test {
             }
         );
     }
+
+    #[test]
+    fn should_execute_bcc_with_carry() {
+        const PROGRAM_COUNTER_ADDRESS: Address = 0x0407;
+        test_instruction!(
+            Cpu::bcc,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
+                cpu.flags.set(Flags::CARRY, true);
+            },
+            Some(0x42),
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_bcc_no_carry_positive_offset() {
+        const PROGRAM_COUNTER_ADDRESS: Address = 0x0407;
+        test_instruction!(
+            Cpu::bcc,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
+                cpu.flags.set(Flags::CARRY, false);
+            },
+            Some(122i8 as u8),
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS + 122);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_bcc_no_carry_negative_offset() {
+        const PROGRAM_COUNTER_ADDRESS: Address = 0x0407;
+        test_instruction!(
+            Cpu::bcc,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
+                cpu.flags.set(Flags::CARRY, false);
+            },
+            Some(-71i8 as u8),
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS - 71);
+            }
+        );
+    }
 }
