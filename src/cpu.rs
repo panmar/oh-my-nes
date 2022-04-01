@@ -1558,4 +1558,132 @@ mod test {
             }
         );
     }
+
+    #[test]
+    fn should_execute_cmx_when_equal() {
+        test_instruction!(
+            Cpu::cpx,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.x_index = 0x5F;
+            },
+            Some(0x5F),
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.flags.contains(Flags::ZERO), true);
+                assert_eq!(cpu.flags.contains(Flags::CARRY), true);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_cmx_when_smaller() {
+        test_instruction!(
+            Cpu::cpx,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.x_index = 0x5E;
+            },
+            Some(0x5F),
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::CARRY), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), true);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_cmx_when_smaller_no_negative() {
+        test_instruction!(
+            Cpu::cpx,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.x_index = 0x00;
+            },
+            Some(0xFF),
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::CARRY), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_cmx_when_greater() {
+        test_instruction!(
+            Cpu::cpx,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.x_index = 0xFF;
+            },
+            Some(0x5F),
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::CARRY), true);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), true);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_cmy_when_equal() {
+        test_instruction!(
+            Cpu::cpy,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.y_index = 0x5F;
+            },
+            Some(0x5F),
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.flags.contains(Flags::ZERO), true);
+                assert_eq!(cpu.flags.contains(Flags::CARRY), true);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_cmy_when_smaller() {
+        test_instruction!(
+            Cpu::cpy,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.y_index = 0x5E;
+            },
+            Some(0x5F),
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::CARRY), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), true);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_cmy_when_smaller_no_negative() {
+        test_instruction!(
+            Cpu::cpy,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.y_index = 0x00;
+            },
+            Some(0xFF),
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::CARRY), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_cmy_when_greater() {
+        test_instruction!(
+            Cpu::cpy,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.y_index = 0xFF;
+            },
+            Some(0x5F),
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::CARRY), true);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), true);
+            }
+        );
+    }
 }
