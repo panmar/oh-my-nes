@@ -1470,7 +1470,7 @@ mod test {
     #[test]
     fn should_execute_cli() {
         test_instruction!(
-            Cpu::cld,
+            Cpu::cli,
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.flags.set(Flags::INTERRUPT_DISABLE, true);
             },
