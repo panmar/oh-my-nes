@@ -650,9 +650,8 @@ impl Cpu {
             .set(Flags::NEGATIVE, self.y_index & 0b1000_0000 != 0);
     }
 
-    fn jmp(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
-        let arg = memory.read_u8(arg_address.unwrap());
-        self.program_counter = arg as u16;
+    fn jmp(&mut self, _memory: &mut Memory, arg_address: Option<Address>) {
+        self.program_counter = arg_address.unwrap();
     }
 
     fn jsr(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
@@ -887,20 +886,27 @@ impl Cpu {
 mod test {
     use super::*;
 
-    const ARGUMENT_ADDRESS: Address = 0x0242;
+    const OPERAND_ADDRESS: Address = 0x0242;
 
-    fn try_set_argument(memory: &mut Memory, arg: Option<u8>) -> Option<Address> {
-        match arg {
-            Some(arg_value) => {
-                memory.write_u8(ARGUMENT_ADDRESS, arg_value);
-                return Some(ARGUMENT_ADDRESS);
+    enum Operand {
+        Address(Address),
+        Value(u8),
+        None,
+    }
+
+    fn try_set_operand(memory: &mut Memory, operand: Operand) -> Option<Address> {
+        match operand {
+            Operand::Address(address) => Some(address),
+            Operand::Value(value) => {
+                memory.write_u8(OPERAND_ADDRESS, value);
+                Some(OPERAND_ADDRESS)
             }
-            None => return None,
+            Operand::None => None,
         }
     }
 
-    fn get_argument(memory: &Memory) -> u8 {
-        return memory.read_u8(ARGUMENT_ADDRESS);
+    fn get_operand_value(memory: &Memory) -> u8 {
+        return memory.read_u8(OPERAND_ADDRESS);
     }
 
     macro_rules! test_instruction {
@@ -909,7 +915,7 @@ mod test {
             let mut cpu = Cpu::new();
             let mut memory = Memory::new();
             $given(&mut cpu, &mut memory);
-            let arg_address = try_set_argument(&mut memory, $arg);
+            let arg_address = try_set_operand(&mut memory, $arg);
 
             // when
             $instruction(&mut cpu, &mut memory, arg_address);
@@ -926,7 +932,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.accumulator = 0x77;
             },
-            Some(0x03),
+            Operand::Value(0x03),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.accumulator, 0x7A);
             }
@@ -940,7 +946,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.accumulator = 0x00;
             },
-            Some(0x00),
+            Operand::Value(0x00),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.accumulator, 0x00);
                 assert!(cpu.flags.contains(Flags::ZERO));
@@ -955,7 +961,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.accumulator = 0x40;
             },
-            Some(0x40),
+            Operand::Value(0x40),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.accumulator, 0x80);
                 assert!(cpu.flags.contains(Flags::NEGATIVE | Flags::OVERFLOW));
@@ -971,7 +977,7 @@ mod test {
                 cpu.accumulator = 0xFF;
                 cpu.flags.set(Flags::CARRY, true);
             },
-            Some(0xFF),
+            Operand::Value(0xFF),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.accumulator, 0xFF);
                 assert!(cpu.flags.contains(Flags::NEGATIVE | Flags::CARRY));
@@ -986,7 +992,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.accumulator = 0b0110_0111;
             },
-            Some(0b1100_0101),
+            Operand::Value(0b1100_0101),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.accumulator, 0b0100_0101);
             }
@@ -1000,7 +1006,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.accumulator = 0b1111_1111;
             },
-            Some(0b1000_0111),
+            Operand::Value(0b1000_0111),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.accumulator, 0b1000_0111);
                 assert!(cpu.flags.contains(Flags::NEGATIVE));
@@ -1015,7 +1021,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.accumulator = 0b1010_0101;
             },
-            Some(0b0101_1010),
+            Operand::Value(0b0101_1010),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.accumulator, 0b0000_0000);
                 assert!(cpu.flags.contains(Flags::ZERO));
@@ -1028,9 +1034,9 @@ mod test {
         test_instruction!(
             Cpu::asl,
             |_cpu: &mut Cpu, _memory: &mut Memory| {},
-            Some(0b0101_0101),
+            Operand::Value(0b0101_0101),
             |cpu: &Cpu, memory: &Memory| {
-                assert_eq!(get_argument(memory), 0b1010_1010);
+                assert_eq!(get_operand_value(memory), 0b1010_1010);
                 assert_eq!(cpu.flags.contains(Flags::CARRY), false);
                 assert_eq!(cpu.flags.contains(Flags::NEGATIVE), true);
             }
@@ -1042,9 +1048,9 @@ mod test {
         test_instruction!(
             Cpu::asl,
             |_cpu: &mut Cpu, _memory: &mut Memory| {},
-            Some(0b1000_0000),
+            Operand::Value(0b1000_0000),
             |cpu: &Cpu, memory: &Memory| {
-                assert_eq!(get_argument(memory), 0b0000_0000);
+                assert_eq!(get_operand_value(memory), 0b0000_0000);
                 assert_eq!(cpu.flags.contains(Flags::CARRY), true);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), true);
             }
@@ -1060,7 +1066,7 @@ mod test {
                 cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
                 cpu.flags.set(Flags::CARRY, true);
             },
-            Some(0x42),
+            Operand::Value(0x42),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS);
             }
@@ -1076,7 +1082,7 @@ mod test {
                 cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
                 cpu.flags.set(Flags::CARRY, false);
             },
-            Some(122i8 as u8),
+            Operand::Value(122i8 as u8),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS + 122);
             }
@@ -1092,7 +1098,7 @@ mod test {
                 cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
                 cpu.flags.set(Flags::CARRY, false);
             },
-            Some(-71i8 as u8),
+            Operand::Value(-71i8 as u8),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS - 71);
             }
@@ -1108,7 +1114,7 @@ mod test {
                 cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
                 cpu.flags.set(Flags::CARRY, true);
             },
-            Some(51i8 as u8),
+            Operand::Value(51i8 as u8),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS + 51);
             }
@@ -1124,7 +1130,7 @@ mod test {
                 cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
                 cpu.flags.set(Flags::CARRY, true);
             },
-            Some(-111i8 as u8),
+            Operand::Value(-111i8 as u8),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS - 111);
             }
@@ -1140,7 +1146,7 @@ mod test {
                 cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
                 cpu.flags.set(Flags::CARRY, false);
             },
-            Some(51i8 as u8),
+            Operand::Value(51i8 as u8),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS);
             }
@@ -1156,7 +1162,7 @@ mod test {
                 cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
                 cpu.flags.set(Flags::ZERO, true);
             },
-            Some(51i8 as u8),
+            Operand::Value(51i8 as u8),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS + 51);
             }
@@ -1172,7 +1178,7 @@ mod test {
                 cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
                 cpu.flags.set(Flags::ZERO, true);
             },
-            Some(-99i8 as u8),
+            Operand::Value(-99i8 as u8),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS - 99);
             }
@@ -1188,7 +1194,7 @@ mod test {
                 cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
                 cpu.flags.set(Flags::ZERO, false);
             },
-            Some(-99i8 as u8),
+            Operand::Value(-99i8 as u8),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS);
             }
@@ -1202,7 +1208,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.accumulator = 0b1011_1001;
             },
-            Some(0b0111_1000),
+            Operand::Value(0b0111_1000),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.accumulator, 0b1011_1001);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
@@ -1219,7 +1225,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.accumulator = 0b1011_1001;
             },
-            Some(0b1111_1000),
+            Operand::Value(0b1111_1000),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.accumulator, 0b1011_1001);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
@@ -1236,7 +1242,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.accumulator = 0b1111_1001;
             },
-            Some(0b0111_1000),
+            Operand::Value(0b0111_1000),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.accumulator, 0b1111_1001);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
@@ -1253,7 +1259,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.accumulator = 0b1010_0101;
             },
-            Some(0b0101_1010),
+            Operand::Value(0b0101_1010),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.accumulator, 0b1010_0101);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), true);
@@ -1272,7 +1278,7 @@ mod test {
                 cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
                 cpu.flags.set(Flags::NEGATIVE, false);
             },
-            Some(51i8 as u8),
+            Operand::Value(51i8 as u8),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS);
             }
@@ -1288,7 +1294,7 @@ mod test {
                 cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
                 cpu.flags.set(Flags::NEGATIVE, true);
             },
-            Some(51i8 as u8),
+            Operand::Value(51i8 as u8),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS + 51);
             }
@@ -1304,7 +1310,7 @@ mod test {
                 cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
                 cpu.flags.set(Flags::NEGATIVE, true);
             },
-            Some(-114i8 as u8),
+            Operand::Value(-114i8 as u8),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS - 114);
             }
@@ -1320,7 +1326,7 @@ mod test {
                 cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
                 cpu.flags.set(Flags::ZERO, false);
             },
-            Some(51i8 as u8),
+            Operand::Value(51i8 as u8),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS + 51);
             }
@@ -1336,7 +1342,7 @@ mod test {
                 cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
                 cpu.flags.set(Flags::ZERO, true);
             },
-            Some(51i8 as u8),
+            Operand::Value(51i8 as u8),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS);
             }
@@ -1352,7 +1358,7 @@ mod test {
                 cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
                 cpu.flags.set(Flags::NEGATIVE, false);
             },
-            Some(51i8 as u8),
+            Operand::Value(51i8 as u8),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS + 51);
             }
@@ -1368,7 +1374,7 @@ mod test {
                 cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
                 cpu.flags.set(Flags::NEGATIVE, true);
             },
-            Some(51i8 as u8),
+            Operand::Value(51i8 as u8),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS);
             }
@@ -1384,7 +1390,7 @@ mod test {
                 cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
                 cpu.flags.set(Flags::OVERFLOW, true);
             },
-            Some(51i8 as u8),
+            Operand::Value(51i8 as u8),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS);
             }
@@ -1400,7 +1406,7 @@ mod test {
                 cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
                 cpu.flags.set(Flags::OVERFLOW, false);
             },
-            Some(-51i8 as u8),
+            Operand::Value(-51i8 as u8),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS - 51);
             }
@@ -1416,7 +1422,7 @@ mod test {
                 cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
                 cpu.flags.set(Flags::OVERFLOW, false);
             },
-            Some(51i8 as u8),
+            Operand::Value(51i8 as u8),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS);
             }
@@ -1432,7 +1438,7 @@ mod test {
                 cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
                 cpu.flags.set(Flags::OVERFLOW, true);
             },
-            Some(-51i8 as u8),
+            Operand::Value(-51i8 as u8),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS - 51);
             }
@@ -1446,7 +1452,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.flags.set(Flags::CARRY, true);
             },
-            None,
+            Operand::None,
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.flags.contains(Flags::CARRY), false);
             }
@@ -1460,7 +1466,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.flags.set(Flags::DECIMAL, true);
             },
-            None,
+            Operand::None,
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.flags.contains(Flags::DECIMAL), false);
             }
@@ -1474,7 +1480,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.flags.set(Flags::INTERRUPT_DISABLE, true);
             },
-            None,
+            Operand::None,
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.flags.contains(Flags::INTERRUPT_DISABLE), false);
             }
@@ -1488,7 +1494,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.flags.set(Flags::OVERFLOW, true);
             },
-            None,
+            Operand::None,
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.flags.contains(Flags::OVERFLOW), false);
             }
@@ -1502,7 +1508,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.accumulator = 0x5F;
             },
-            Some(0x5F),
+            Operand::Value(0x5F),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.flags.contains(Flags::ZERO), true);
                 assert_eq!(cpu.flags.contains(Flags::CARRY), true);
@@ -1518,7 +1524,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.accumulator = 0x5E;
             },
-            Some(0x5F),
+            Operand::Value(0x5F),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
                 assert_eq!(cpu.flags.contains(Flags::CARRY), false);
@@ -1534,7 +1540,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.accumulator = 0x00;
             },
-            Some(0xFF),
+            Operand::Value(0xFF),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
                 assert_eq!(cpu.flags.contains(Flags::CARRY), false);
@@ -1550,7 +1556,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.accumulator = 0x60;
             },
-            Some(0x5F),
+            Operand::Value(0x5F),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
                 assert_eq!(cpu.flags.contains(Flags::CARRY), true);
@@ -1566,7 +1572,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.x_index = 0x5F;
             },
-            Some(0x5F),
+            Operand::Value(0x5F),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.flags.contains(Flags::ZERO), true);
                 assert_eq!(cpu.flags.contains(Flags::CARRY), true);
@@ -1582,7 +1588,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.x_index = 0x5E;
             },
-            Some(0x5F),
+            Operand::Value(0x5F),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
                 assert_eq!(cpu.flags.contains(Flags::CARRY), false);
@@ -1598,7 +1604,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.x_index = 0x00;
             },
-            Some(0xFF),
+            Operand::Value(0xFF),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
                 assert_eq!(cpu.flags.contains(Flags::CARRY), false);
@@ -1614,7 +1620,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.x_index = 0xFF;
             },
-            Some(0x5F),
+            Operand::Value(0x5F),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
                 assert_eq!(cpu.flags.contains(Flags::CARRY), true);
@@ -1630,7 +1636,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.y_index = 0x5F;
             },
-            Some(0x5F),
+            Operand::Value(0x5F),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.flags.contains(Flags::ZERO), true);
                 assert_eq!(cpu.flags.contains(Flags::CARRY), true);
@@ -1646,7 +1652,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.y_index = 0x5E;
             },
-            Some(0x5F),
+            Operand::Value(0x5F),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
                 assert_eq!(cpu.flags.contains(Flags::CARRY), false);
@@ -1662,7 +1668,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.y_index = 0x00;
             },
-            Some(0xFF),
+            Operand::Value(0xFF),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
                 assert_eq!(cpu.flags.contains(Flags::CARRY), false);
@@ -1678,7 +1684,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.y_index = 0xFF;
             },
-            Some(0x5F),
+            Operand::Value(0x5F),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
                 assert_eq!(cpu.flags.contains(Flags::CARRY), true);
@@ -1692,9 +1698,9 @@ mod test {
         test_instruction!(
             Cpu::dec,
             |_cpu: &mut Cpu, _memory: &mut Memory| {},
-            Some(0x71),
+            Operand::Value(0x71),
             |cpu: &Cpu, memory: &Memory| {
-                assert_eq!(get_argument(memory), 0x70);
+                assert_eq!(get_operand_value(memory), 0x70);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
                 assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
             }
@@ -1706,9 +1712,9 @@ mod test {
         test_instruction!(
             Cpu::dec,
             |_cpu: &mut Cpu, _memory: &mut Memory| {},
-            Some(0x00),
+            Operand::Value(0x00),
             |cpu: &Cpu, memory: &Memory| {
-                assert_eq!(get_argument(memory), 0xFF);
+                assert_eq!(get_operand_value(memory), 0xFF);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
                 assert_eq!(cpu.flags.contains(Flags::NEGATIVE), true);
             }
@@ -1720,9 +1726,9 @@ mod test {
         test_instruction!(
             Cpu::dec,
             |_cpu: &mut Cpu, _memory: &mut Memory| {},
-            Some(0x01),
+            Operand::Value(0x01),
             |cpu: &Cpu, memory: &Memory| {
-                assert_eq!(get_argument(memory), 0x00);
+                assert_eq!(get_operand_value(memory), 0x00);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), true);
                 assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
             }
@@ -1736,7 +1742,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.x_index = 0x61;
             },
-            None,
+            Operand::None,
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.x_index, 0x60);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
@@ -1752,7 +1758,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.x_index = 0x00;
             },
-            None,
+            Operand::None,
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.x_index, 0xFF);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
@@ -1768,7 +1774,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.x_index = 0x01;
             },
-            None,
+            Operand::None,
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.x_index, 0x00);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), true);
@@ -1784,7 +1790,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.y_index = 0x61;
             },
-            None,
+            Operand::None,
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.y_index, 0x60);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
@@ -1800,7 +1806,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.y_index = 0x00;
             },
-            None,
+            Operand::None,
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.y_index, 0xFF);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
@@ -1816,7 +1822,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.y_index = 0x01;
             },
-            None,
+            Operand::None,
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.y_index, 0x00);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), true);
@@ -1832,7 +1838,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.accumulator = 0b0110_1001;
             },
-            Some(0b0111_1111),
+            Operand::Value(0b0111_1111),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.accumulator, 0b0001_0110);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
@@ -1848,7 +1854,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.accumulator = 0b0110_1001;
             },
-            Some(0b0110_1001),
+            Operand::Value(0b0110_1001),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.accumulator, 0b0000_0000);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), true);
@@ -1864,7 +1870,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.accumulator = 0b0000_1001;
             },
-            Some(0b1110_1001),
+            Operand::Value(0b1110_1001),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.accumulator, 0b1110_0000);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
@@ -1878,9 +1884,9 @@ mod test {
         test_instruction!(
             Cpu::inc,
             |_cpu: &mut Cpu, _memory: &mut Memory| {},
-            Some(0x56),
+            Operand::Value(0x56),
             |cpu: &Cpu, memory: &Memory| {
-                assert_eq!(get_argument(memory), 0x57);
+                assert_eq!(get_operand_value(memory), 0x57);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
                 assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
             }
@@ -1892,9 +1898,9 @@ mod test {
         test_instruction!(
             Cpu::inc,
             |_cpu: &mut Cpu, _memory: &mut Memory| {},
-            Some(0xFF),
+            Operand::Value(0xFF),
             |cpu: &Cpu, memory: &Memory| {
-                assert_eq!(get_argument(memory), 0x00);
+                assert_eq!(get_operand_value(memory), 0x00);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), true);
                 assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
             }
@@ -1906,9 +1912,9 @@ mod test {
         test_instruction!(
             Cpu::inc,
             |_cpu: &mut Cpu, _memory: &mut Memory| {},
-            Some(0x9B),
+            Operand::Value(0x9B),
             |cpu: &Cpu, memory: &Memory| {
-                assert_eq!(get_argument(memory), 0x9C);
+                assert_eq!(get_operand_value(memory), 0x9C);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
                 assert_eq!(cpu.flags.contains(Flags::NEGATIVE), true);
             }
@@ -1922,7 +1928,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.x_index = 0x61;
             },
-            None,
+            Operand::None,
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.x_index, 0x62);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
@@ -1938,7 +1944,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.x_index = 0xFF;
             },
-            None,
+            Operand::None,
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.x_index, 0x00);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), true);
@@ -1954,7 +1960,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.x_index = 127;
             },
-            None,
+            Operand::None,
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.x_index, 128);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
@@ -1970,7 +1976,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.y_index = 0x61;
             },
-            None,
+            Operand::None,
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.y_index, 0x62);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
@@ -1986,7 +1992,7 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.y_index = 0xFF;
             },
-            None,
+            Operand::None,
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.y_index, 0x00);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), true);
@@ -2002,11 +2008,25 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.y_index = 127;
             },
-            None,
+            Operand::None,
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.y_index, 128);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
                 assert_eq!(cpu.flags.contains(Flags::NEGATIVE), true);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_jmp() {
+        test_instruction!(
+            Cpu::jmp,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.program_counter = 0x0200;
+            },
+            Operand::Address(0x0678),
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.program_counter, 0x0678);
             }
         );
     }
