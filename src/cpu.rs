@@ -1446,9 +1446,37 @@ mod test {
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 cpu.flags.set(Flags::CARRY, true);
             },
-            Some(-51i8 as u8),
+            None,
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.flags.contains(Flags::CARRY), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_cld() {
+        test_instruction!(
+            Cpu::cld,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.flags.set(Flags::DECIMAL, true);
+            },
+            None,
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.flags.contains(Flags::DECIMAL), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_cli() {
+        test_instruction!(
+            Cpu::cld,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.flags.set(Flags::INTERRUPT_DISABLE, true);
+            },
+            None,
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.flags.contains(Flags::INTERRUPT_DISABLE), false);
             }
         );
     }
