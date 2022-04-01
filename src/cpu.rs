@@ -1914,4 +1914,100 @@ mod test {
             }
         );
     }
+
+    #[test]
+    fn should_execute_inx() {
+        test_instruction!(
+            Cpu::inx,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.x_index = 0x61;
+            },
+            None,
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.x_index, 0x62);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_inx_wrapping() {
+        test_instruction!(
+            Cpu::inx,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.x_index = 0xFF;
+            },
+            None,
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.x_index, 0x00);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), true);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_inx_negativeg() {
+        test_instruction!(
+            Cpu::inx,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.x_index = 127;
+            },
+            None,
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.x_index, 128);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), true);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_iny() {
+        test_instruction!(
+            Cpu::iny,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.y_index = 0x61;
+            },
+            None,
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.y_index, 0x62);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_iny_wrapping() {
+        test_instruction!(
+            Cpu::iny,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.y_index = 0xFF;
+            },
+            None,
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.y_index, 0x00);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), true);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_iny_negativeg() {
+        test_instruction!(
+            Cpu::iny,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.y_index = 127;
+            },
+            None,
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.y_index, 128);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), true);
+            }
+        );
+    }
 }
