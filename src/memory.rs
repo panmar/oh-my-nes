@@ -20,6 +20,11 @@ impl Memory {
         self.data[effective_address]
     }
 
+    pub fn read_u8_for_writing(&mut self, address: Address) -> &mut u8 {
+        let effective_address = Memory::compute_effective_address(address) as usize;
+        &mut self.data[effective_address]
+    }
+
     pub fn read_u16(&self, address: Address) -> u16 {
         u16::from_le_bytes([self.read_u8(address), self.read_u8(address + 1)])
     }

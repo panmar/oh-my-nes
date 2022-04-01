@@ -453,7 +453,6 @@ const INSTRUCTIONS: [Instruction; 256] = [
 impl Cpu {
     fn adc(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
         let arg = memory.read_u8(arg_address.unwrap());
-
         let (result, carry_1) = self.accumulator.overflowing_add(arg);
         let (result, carry_2) = result.overflowing_add(self.flags.contains(Flags::CARRY) as u8);
 
@@ -474,21 +473,23 @@ impl Cpu {
     }
 
     fn asl(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
-        match arg_address {
-            Some(address) => {
-                let arg = memory.read_u8(address);
-                let (result, carry) = arg.overflowing_shl(1);
-                memory.write_u8(address, result);
-                self.flags.set(Flags::ZERO, result == 0);
-                self.flags.set(Flags::NEGATIVE, result & 0b1000_0000 != 0);
-                self.flags.set(Flags::CARRY, carry);
+        fn asl_internal(flags: &mut Flags, arg_ref: &mut u8) {
+            let mut result = *arg_ref << 1;
+            if flags.contains(Flags::ZERO) {
+                result |= 0b0000_0001;
             }
-            None => {
-                let (result, carry) = self.accumulator.overflowing_shl(1);
-                self.set_accumulator(result);
-                self.flags.set(Flags::CARRY, carry);
-            }
+            flags.set(Flags::CARRY, *arg_ref & 0b1000_0000 != 0);
+            flags.set(Flags::ZERO, result == 0);
+            flags.set(Flags::NEGATIVE, result & 0b1000_0000 != 0);
+            *arg_ref = result;
         }
+
+        let arg_ref = match arg_address {
+            Some(address) => memory.read_u8_for_writing(address),
+            None => &mut self.accumulator,
+        };
+
+        asl_internal(&mut self.flags, arg_ref);
     }
 
     fn bcc(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
@@ -1030,6 +1031,35 @@ mod test {
             |cpu: &Cpu, memory: &Memory| {
                 assert_eq!(get_argument(memory), 0b1010_1010);
                 assert_eq!(cpu.flags.contains(Flags::CARRY), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), true);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_asl_with_carry_output() {
+        test_instruction!(
+            Cpu::asl,
+            |_cpu: &mut Cpu, _memory: &mut Memory| {},
+            Some(0b1000_0000),
+            |cpu: &Cpu, memory: &Memory| {
+                assert_eq!(get_argument(memory), 0b0000_0000);
+                assert_eq!(cpu.flags.contains(Flags::CARRY), true);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), true);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_asl_with_zero_input() {
+        test_instruction!(
+            Cpu::asl,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.flags.set(Flags::ZERO, true);
+            },
+            Some(0b0000_0100),
+            |_cpu: &Cpu, memory: &Memory| {
+                assert_eq!(get_argument(memory), 0b0000_1001);
             }
         );
     }
