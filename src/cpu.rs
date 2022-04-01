@@ -475,9 +475,6 @@ impl Cpu {
     fn asl(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
         fn asl_internal(flags: &mut Flags, arg_ref: &mut u8) {
             let mut result = *arg_ref << 1;
-            if flags.contains(Flags::ZERO) {
-                result |= 0b0000_0001;
-            }
             flags.set(Flags::CARRY, *arg_ref & 0b1000_0000 != 0);
             flags.set(Flags::ZERO, result == 0);
             flags.set(Flags::NEGATIVE, result & 0b1000_0000 != 0);
@@ -1046,20 +1043,6 @@ mod test {
                 assert_eq!(get_argument(memory), 0b0000_0000);
                 assert_eq!(cpu.flags.contains(Flags::CARRY), true);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), true);
-            }
-        );
-    }
-
-    #[test]
-    fn should_execute_asl_with_zero_input() {
-        test_instruction!(
-            Cpu::asl,
-            |cpu: &mut Cpu, _memory: &mut Memory| {
-                cpu.flags.set(Flags::ZERO, true);
-            },
-            Some(0b0000_0100),
-            |_cpu: &Cpu, memory: &Memory| {
-                assert_eq!(get_argument(memory), 0b0000_1001);
             }
         );
     }
