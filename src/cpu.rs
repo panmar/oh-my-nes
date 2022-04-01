@@ -578,7 +578,7 @@ impl Cpu {
     }
 
     fn clv(&mut self, _memory: &mut Memory, _arg_address: Option<Address>) {
-        self.flags.set(Flags::CARRY, false);
+        self.flags.set(Flags::OVERFLOW, false);
     }
 
     fn cmp(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
@@ -1477,6 +1477,20 @@ mod test {
             None,
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.flags.contains(Flags::INTERRUPT_DISABLE), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_clv() {
+        test_instruction!(
+            Cpu::clv,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.flags.set(Flags::OVERFLOW, true);
+            },
+            None,
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.flags.contains(Flags::OVERFLOW), false);
             }
         );
     }
