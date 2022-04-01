@@ -524,9 +524,10 @@ impl Cpu {
         }
     }
 
-    fn bne(&mut self, _memory: &mut Memory, arg_address: Option<Address>) {
+    fn bne(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
         if !self.flags.contains(Flags::ZERO) {
-            self.program_counter += arg_address.unwrap();
+            let relative_address = memory.read_u8(arg_address.unwrap()) as i8;
+            self.jump(relative_address);
         }
     }
 
@@ -1303,6 +1304,38 @@ mod test {
             Some(-114i8 as u8),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS - 114);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_bne_no_zero() {
+        const PROGRAM_COUNTER_ADDRESS: Address = 0x0407;
+        test_instruction!(
+            Cpu::bne,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
+                cpu.flags.set(Flags::ZERO, false);
+            },
+            Some(51i8 as u8),
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS + 51);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_bne_with_zero() {
+        const PROGRAM_COUNTER_ADDRESS: Address = 0x0407;
+        test_instruction!(
+            Cpu::bne,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
+                cpu.flags.set(Flags::ZERO, true);
+            },
+            Some(51i8 as u8),
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS);
             }
         );
     }
