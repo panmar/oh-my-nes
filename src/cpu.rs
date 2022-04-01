@@ -551,9 +551,10 @@ impl Cpu {
         self.program_counter = memory.read_u16(0xFFFE);
     }
 
-    fn bvc(&mut self, _memory: &mut Memory, arg_address: Option<Address>) {
+    fn bvc(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
         if !self.flags.contains(Flags::OVERFLOW) {
-            self.program_counter += arg_address.unwrap();
+            let relative_address = memory.read_u8(arg_address.unwrap()) as i8;
+            self.jump(relative_address);
         }
     }
 
@@ -1369,6 +1370,38 @@ mod test {
             Some(51i8 as u8),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_bvc_with_overflow() {
+        const PROGRAM_COUNTER_ADDRESS: Address = 0x0407;
+        test_instruction!(
+            Cpu::bvc,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
+                cpu.flags.set(Flags::OVERFLOW, true);
+            },
+            Some(51i8 as u8),
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_bvc_no_overflow() {
+        const PROGRAM_COUNTER_ADDRESS: Address = 0x0407;
+        test_instruction!(
+            Cpu::bvc,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
+                cpu.flags.set(Flags::OVERFLOW, false);
+            },
+            Some(-51i8 as u8),
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS - 51);
             }
         );
     }
