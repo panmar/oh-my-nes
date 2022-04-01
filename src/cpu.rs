@@ -1872,4 +1872,46 @@ mod test {
             }
         );
     }
+
+    #[test]
+    fn should_execute_inc() {
+        test_instruction!(
+            Cpu::inc,
+            |_cpu: &mut Cpu, _memory: &mut Memory| {},
+            Some(0x56),
+            |cpu: &Cpu, memory: &Memory| {
+                assert_eq!(get_argument(memory), 0x57);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_inc_wrapping() {
+        test_instruction!(
+            Cpu::inc,
+            |_cpu: &mut Cpu, _memory: &mut Memory| {},
+            Some(0xFF),
+            |cpu: &Cpu, memory: &Memory| {
+                assert_eq!(get_argument(memory), 0x00);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), true);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_inc_when_negative() {
+        test_instruction!(
+            Cpu::inc,
+            |_cpu: &mut Cpu, _memory: &mut Memory| {},
+            Some(0x9B),
+            |cpu: &Cpu, memory: &Memory| {
+                assert_eq!(get_argument(memory), 0x9C);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), true);
+            }
+        );
+    }
 }
