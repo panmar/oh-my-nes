@@ -1438,4 +1438,18 @@ mod test {
             }
         );
     }
+
+    #[test]
+    fn should_execute_clc() {
+        test_instruction!(
+            Cpu::clc,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.flags.set(Flags::CARRY, true);
+            },
+            Some(-51i8 as u8),
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.flags.contains(Flags::CARRY), false);
+            }
+        );
+    }
 }
