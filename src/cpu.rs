@@ -769,8 +769,7 @@ impl Cpu {
     }
 
     fn rts(&mut self, memory: &mut Memory, _arg_address: Option<Address>) {
-        // TODO(panmar): Do we need to increments by 1?
-        self.program_counter = memory.stack(&mut self.stack_pointer).pop_u16() + 1;
+        self.program_counter = memory.stack(&mut self.stack_pointer).pop_u16();
     }
 
     fn sbc(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
@@ -2561,6 +2560,41 @@ mod test {
                 assert_eq!(cpu.flags.contains(Flags::ZERO), true);
                 assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
                 assert_eq!(cpu.flags.contains(Flags::CARRY), true);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_rti_after_brk() {
+        test_instruction!(
+            Cpu::rti,
+            |cpu: &mut Cpu, memory: &mut Memory| {
+                cpu.flags = Flags::from_bits(0b0101_1010).unwrap();
+                cpu.program_counter = 0x0277;
+                cpu.brk(memory, None);
+                cpu.flags = Flags::from_bits(0b1100_0110).unwrap();
+                cpu.program_counter = 0x0491;
+            },
+            Operand::None,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                assert_eq!(cpu.program_counter, 0x0277);
+                assert_eq!(cpu.flags.bits(), 0b0101_1010);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_rts_after_jrs() {
+        test_instruction!(
+            Cpu::rts,
+            |cpu: &mut Cpu, memory: &mut Memory| {
+                cpu.program_counter = 0x0277;
+                cpu.jsr(memory, Some(0x0388));
+                cpu.program_counter = 0x0491;
+            },
+            Operand::None,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                assert_eq!(cpu.program_counter, 0x0277);
             }
         );
     }
