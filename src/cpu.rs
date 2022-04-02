@@ -2086,4 +2086,92 @@ mod test {
             }
         );
     }
+
+    #[test]
+    fn should_execute_ldx() {
+        test_instruction!(
+            Cpu::ldx,
+            |_cpu: &mut Cpu, _memory: &mut Memory| {},
+            Operand::Value(0x78),
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                assert_eq!(cpu.x_index, 0x78);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_ldx_when_zero() {
+        test_instruction!(
+            Cpu::ldx,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.x_index = 0x42;
+            },
+            Operand::Value(0x00),
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                assert_eq!(cpu.x_index, 0x00);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), true);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_ldx_when_negative() {
+        test_instruction!(
+            Cpu::ldx,
+            |_cpu: &mut Cpu, _memory: &mut Memory| {},
+            Operand::Value(129),
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                assert_eq!(cpu.x_index, 129);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), true);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_ldy() {
+        test_instruction!(
+            Cpu::ldy,
+            |_cpu: &mut Cpu, _memory: &mut Memory| {},
+            Operand::Value(0x78),
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                assert_eq!(cpu.y_index, 0x78);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_ldy_when_zero() {
+        test_instruction!(
+            Cpu::ldy,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.y_index = 0x42;
+            },
+            Operand::Value(0x00),
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                assert_eq!(cpu.y_index, 0x00);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), true);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_ldy_when_negative() {
+        test_instruction!(
+            Cpu::ldy,
+            |_cpu: &mut Cpu, _memory: &mut Memory| {},
+            Operand::Value(129),
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                assert_eq!(cpu.y_index, 129);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), true);
+            }
+        );
+    }
 }
