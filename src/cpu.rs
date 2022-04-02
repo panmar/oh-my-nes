@@ -2238,4 +2238,53 @@ mod test {
             }
         );
     }
+
+    #[test]
+    fn should_execute_ora() {
+        test_instruction!(
+            Cpu::ora,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.accumulator = 0b0110_1001;
+            },
+            Operand::Value(0b0111_1110),
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.accumulator, 0b0111_1111);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_ora_when_zero() {
+        test_instruction!(
+            Cpu::ora,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.accumulator = 0b0000_0000;
+            },
+            Operand::Value(0b0000_0000),
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.accumulator, 0b0000_0000);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), true);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_ora_when_negative() {
+        test_instruction!(
+            Cpu::ora,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.accumulator = 0b0000_1001;
+            },
+            Operand::Value(0b1110_1001),
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.accumulator, 0b1110_1001);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), true);
+            }
+        );
+    }
+
 }
