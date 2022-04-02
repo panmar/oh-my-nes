@@ -2300,7 +2300,7 @@ mod test {
                 cpu.accumulator = 0x42;
             },
             Operand::None,
-            |cpu: &mut Cpu, _memory: &mut Memory| {
+            |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.accumulator, 0x17);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
                 assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
@@ -2320,7 +2320,7 @@ mod test {
                 cpu.accumulator = 0x42;
             },
             Operand::None,
-            |cpu: &mut Cpu, _memory: &mut Memory| {
+            |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.accumulator, 0x00);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), true);
                 assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
@@ -2340,7 +2340,7 @@ mod test {
                 cpu.accumulator = 0x42;
             },
             Operand::None,
-            |cpu: &mut Cpu, _memory: &mut Memory| {
+            |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.accumulator, 0x9B);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
                 assert_eq!(cpu.flags.contains(Flags::NEGATIVE), true);
@@ -2358,7 +2358,7 @@ mod test {
                 cpu.flags.bits = 0b1011_0111;
             },
             Operand::None,
-            |cpu: &mut Cpu, _memory: &mut Memory| {
+            |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.flags.bits(), 0b0101_1010);
             }
         );
@@ -2373,7 +2373,7 @@ mod test {
                 cpu.accumulator = 0b0010_1001;
             },
             Operand::None,
-            |cpu: &mut Cpu, _memory: &mut Memory| {
+            |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.accumulator, 0b0101_0010);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
                 assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
@@ -2390,7 +2390,7 @@ mod test {
                 cpu.flags.set(Flags::CARRY, false);
             },
             Operand::Value(0b0010_1001),
-            |cpu: &mut Cpu, memory: &mut Memory| {
+            |cpu: &Cpu, memory: &Memory| {
                 assert_eq!(get_operand_value(memory), 0b0101_0010);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
                 assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
@@ -2408,7 +2408,7 @@ mod test {
                 cpu.accumulator = 0b0010_1001;
             },
             Operand::None,
-            |cpu: &mut Cpu, _memory: &mut Memory| {
+            |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.accumulator, 0b0101_0011);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
                 assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
@@ -2426,7 +2426,7 @@ mod test {
                 cpu.accumulator = 0b1010_1001;
             },
             Operand::None,
-            |cpu: &mut Cpu, _memory: &mut Memory| {
+            |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.accumulator, 0b0101_0010);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
                 assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
@@ -2444,7 +2444,7 @@ mod test {
                 cpu.accumulator = 0b1000_0000;
             },
             Operand::None,
-            |cpu: &mut Cpu, _memory: &mut Memory| {
+            |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.accumulator, 0b0000_0000);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), true);
                 assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
@@ -2462,7 +2462,7 @@ mod test {
                 cpu.accumulator = 0b0100_1000;
             },
             Operand::None,
-            |cpu: &mut Cpu, _memory: &mut Memory| {
+            |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.accumulator, 0b1001_0000);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
                 assert_eq!(cpu.flags.contains(Flags::NEGATIVE), true);
@@ -2480,7 +2480,7 @@ mod test {
                 cpu.accumulator = 0b1010_1010;
             },
             Operand::None,
-            |cpu: &mut Cpu, _memory: &mut Memory| {
+            |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.accumulator, 0b0101_0101);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
                 assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
@@ -2497,7 +2497,7 @@ mod test {
                 cpu.flags.set(Flags::CARRY, false);
             },
             Operand::Value(0b1010_1010),
-            |cpu: &mut Cpu, memory: &mut Memory| {
+            |cpu: &Cpu, memory: &Memory| {
                 assert_eq!(get_operand_value(memory), 0b0101_0101);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
                 assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
@@ -2515,7 +2515,7 @@ mod test {
                 cpu.accumulator = 0b1010_1010;
             },
             Operand::None,
-            |cpu: &mut Cpu, _memory: &mut Memory| {
+            |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.accumulator, 0b1101_0101);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
                 assert_eq!(cpu.flags.contains(Flags::NEGATIVE), true);
@@ -2533,7 +2533,7 @@ mod test {
                 cpu.accumulator = 0b1010_1011;
             },
             Operand::None,
-            |cpu: &mut Cpu, _memory: &mut Memory| {
+            |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.accumulator, 0b0101_0101);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
                 assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
@@ -2551,7 +2551,7 @@ mod test {
                 cpu.accumulator = 0b0000_0001;
             },
             Operand::None,
-            |cpu: &mut Cpu, _memory: &mut Memory| {
+            |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.accumulator, 0b0000_0000);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), true);
                 assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
@@ -2572,7 +2572,7 @@ mod test {
                 cpu.program_counter = 0x0491;
             },
             Operand::None,
-            |cpu: &mut Cpu, _memory: &mut Memory| {
+            |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, 0x0277);
                 assert_eq!(cpu.flags.bits(), 0b0101_1010);
             }
@@ -2589,7 +2589,7 @@ mod test {
                 cpu.program_counter = 0x0491;
             },
             Operand::None,
-            |cpu: &mut Cpu, _memory: &mut Memory| {
+            |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, 0x0277);
             }
         );
@@ -2604,7 +2604,7 @@ mod test {
                 cpu.accumulator = 0x79;
             },
             Operand::Value(0x1F),
-            |cpu: &mut Cpu, _memory: &mut Memory| {
+            |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.accumulator, 0x59);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
                 assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
@@ -2622,7 +2622,7 @@ mod test {
                 cpu.accumulator = 0x1F;
             },
             Operand::Value(0x79),
-            |cpu: &mut Cpu, _memory: &mut Memory| {
+            |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.accumulator, 0xA5);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
                 assert_eq!(cpu.flags.contains(Flags::NEGATIVE), true);
@@ -2640,7 +2640,7 @@ mod test {
                 cpu.accumulator = 0xBF;
             },
             Operand::Value(0xBF),
-            |cpu: &mut Cpu, _memory: &mut Memory| {
+            |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.accumulator, 0x00);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), true);
                 assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
@@ -2658,11 +2658,354 @@ mod test {
                 cpu.accumulator = 0xBF;
             },
             Operand::Value(0xBF),
-            |cpu: &mut Cpu, _memory: &mut Memory| {
+            |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.accumulator, 0xFF);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
                 assert_eq!(cpu.flags.contains(Flags::NEGATIVE), true);
                 assert_eq!(cpu.flags.contains(Flags::CARRY), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_sec() {
+        test_instruction!(
+            Cpu::sec,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.flags.set(Flags::CARRY, false);
+            },
+            Operand::None,
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.flags.contains(Flags::CARRY), true);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_sed() {
+        test_instruction!(
+            Cpu::sed,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.flags.set(Flags::DECIMAL, false);
+            },
+            Operand::None,
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.flags.contains(Flags::DECIMAL), true);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_sei() {
+        test_instruction!(
+            Cpu::sei,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.flags.set(Flags::INTERRUPT_DISABLE, false);
+            },
+            Operand::None,
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.flags.contains(Flags::INTERRUPT_DISABLE), true);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_sta() {
+        test_instruction!(
+            Cpu::sta,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.accumulator = 0x8C;
+            },
+            Operand::Address(0x0271),
+            |_cpu: &Cpu, memory: &Memory| {
+                assert_eq!(memory.read_u8(0x0271), 0x8C);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_stx() {
+        test_instruction!(
+            Cpu::stx,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.x_index = 0x8C;
+            },
+            Operand::Address(0x0271),
+            |_cpu: &Cpu, memory: &Memory| {
+                assert_eq!(memory.read_u8(0x0271), 0x8C);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_sty() {
+        test_instruction!(
+            Cpu::sty,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.y_index = 0x8C;
+            },
+            Operand::Address(0x0271),
+            |_cpu: &Cpu, memory: &Memory| {
+                assert_eq!(memory.read_u8(0x0271), 0x8C);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_tax() {
+        test_instruction!(
+            Cpu::tax,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.accumulator = 0x6C;
+            },
+            Operand::None,
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.x_index, 0x6C);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_tax_with_zero() {
+        test_instruction!(
+            Cpu::tax,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.x_index = 0x91;
+                cpu.accumulator = 0x00;
+            },
+            Operand::None,
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.x_index, 0x00);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), true);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_tax_with_negative() {
+        test_instruction!(
+            Cpu::tax,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.accumulator = 0xD4;
+            },
+            Operand::None,
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.x_index, 0xD4);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), true);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_tay() {
+        test_instruction!(
+            Cpu::tay,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.accumulator = 0x6C;
+            },
+            Operand::None,
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.y_index, 0x6C);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_tay_with_zero() {
+        test_instruction!(
+            Cpu::tay,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.y_index = 0x91;
+                cpu.accumulator = 0x00;
+            },
+            Operand::None,
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.y_index, 0x00);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), true);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_tay_with_negative() {
+        test_instruction!(
+            Cpu::tay,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.accumulator = 0xD4;
+            },
+            Operand::None,
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.y_index, 0xD4);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), true);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_tsx() {
+        test_instruction!(
+            Cpu::tsx,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.stack_pointer = 0x6C;
+            },
+            Operand::None,
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.x_index, 0x6C);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_tsx_with_zero() {
+        test_instruction!(
+            Cpu::tsx,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.x_index = 0xF4;
+                cpu.stack_pointer = 0x00;
+            },
+            Operand::None,
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.x_index, 0x00);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), true);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_tsx_with_negative() {
+        test_instruction!(
+            Cpu::tsx,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.stack_pointer = 0xC9;
+            },
+            Operand::None,
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.x_index, 0xC9);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), true);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_txa() {
+        test_instruction!(
+            Cpu::txa,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.x_index = 0x6C;
+            },
+            Operand::None,
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.accumulator, 0x6C);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_txa_with_zero() {
+        test_instruction!(
+            Cpu::txa,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.accumulator = 0x43;
+                cpu.x_index = 0x00;
+            },
+            Operand::None,
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.accumulator, 0x00);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), true);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_txa_with_negative() {
+        test_instruction!(
+            Cpu::txa,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.x_index = 0x91;
+            },
+            Operand::None,
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.accumulator, 0x91);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), true);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_txs() {
+        test_instruction!(
+            Cpu::txs,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.x_index = 0x6C;
+            },
+            Operand::None,
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.stack_pointer, 0x6C);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_tya() {
+        test_instruction!(
+            Cpu::tya,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.y_index = 0x6C;
+            },
+            Operand::None,
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.accumulator, 0x6C);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_tya_with_zero() {
+        test_instruction!(
+            Cpu::tya,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.accumulator = 0xB2;
+                cpu.y_index = 0x00;
+            },
+            Operand::None,
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.accumulator, 0x00);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), true);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_tya_with_negative() {
+        test_instruction!(
+            Cpu::tya,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.y_index = 0x97;
+            },
+            Operand::None,
+            |cpu: &Cpu, _memory: &Memory| {
+                assert_eq!(cpu.accumulator, 0x97);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), true);
             }
         );
     }
