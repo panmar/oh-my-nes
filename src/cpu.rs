@@ -683,21 +683,19 @@ impl Cpu {
     }
 
     fn lsr(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
-        match arg_address {
-            Some(address) => {
-                let arg = memory.read_u8(address);
-                self.flags.set(Flags::CARRY, arg & 1 != 0);
-                let (result, _) = arg.overflowing_shr(1);
-                memory.write_u8(address, result);
-                self.flags.set(Flags::ZERO, result == 0);
-                self.flags.set(Flags::NEGATIVE, result & 0b1000_0000 != 0);
-            }
-            None => {
-                self.flags.set(Flags::CARRY, self.accumulator & 1 != 0);
-                let (result, _) = self.accumulator.overflowing_shr(1);
-                self.set_accumulator(result);
-            }
+        fn lsr_internal(flags: &mut Flags, arg_ref: &mut u8) {
+            flags.set(Flags::CARRY, *arg_ref & 0b0000_0001 != 0);
+            *arg_ref >>= 1;
+            flags.set(Flags::ZERO, *arg_ref == 0);
+            flags.set(Flags::NEGATIVE, *arg_ref & 0b1000_0000 != 0);
         }
+
+        let arg_ref = match arg_address {
+            Some(address) => memory.read_u8_for_writing(address),
+            None => &mut self.accumulator,
+        };
+
+        lsr_internal(&mut self.flags, arg_ref);
     }
 
     fn nop(&mut self, _memory: &mut Memory, _arg_address: Option<Address>) {}
@@ -2171,6 +2169,72 @@ mod test {
                 assert_eq!(cpu.y_index, 129);
                 assert_eq!(cpu.flags.contains(Flags::ZERO), false);
                 assert_eq!(cpu.flags.contains(Flags::NEGATIVE), true);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_lsr_accumulator() {
+        test_instruction!(
+            Cpu::lsr,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.accumulator = 0b1110_1010;
+            },
+            Operand::None,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                assert_eq!(cpu.accumulator, 0b0111_0101);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+                assert_eq!(cpu.flags.contains(Flags::CARRY), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_lsr_memory() {
+        test_instruction!(
+            Cpu::lsr,
+            |_cpu: &mut Cpu, _memory: &mut Memory| {},
+            Operand::Value(0b1110_1010),
+            |cpu: &mut Cpu, memory: &mut Memory| {
+                assert_eq!(get_operand_value(memory), 0b0111_0101);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+                assert_eq!(cpu.flags.contains(Flags::CARRY), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_lsr_with_carry() {
+        test_instruction!(
+            Cpu::lsr,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.accumulator = 0b1110_1011;
+            },
+            Operand::None,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                assert_eq!(cpu.accumulator, 0b0111_0101);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+                assert_eq!(cpu.flags.contains(Flags::CARRY), true);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_lsr_with_zero() {
+        test_instruction!(
+            Cpu::lsr,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.accumulator = 0b0000_0001;
+            },
+            Operand::None,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                assert_eq!(cpu.accumulator, 0b0000_0000);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), true);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+                assert_eq!(cpu.flags.contains(Flags::CARRY), true);
             }
         );
     }
