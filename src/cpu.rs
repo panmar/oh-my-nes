@@ -2042,4 +2042,48 @@ mod test {
             }
         );
     }
+
+    #[test]
+    fn should_execute_lda() {
+        test_instruction!(
+            Cpu::lda,
+            |_cpu: &mut Cpu, _memory: &mut Memory| {},
+            Operand::Value(0x78),
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                assert_eq!(cpu.accumulator, 0x78);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_lda_when_zero() {
+        test_instruction!(
+            Cpu::lda,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.accumulator = 0x42;
+            },
+            Operand::Value(0x00),
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                assert_eq!(cpu.accumulator, 0x00);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), true);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_lda_when_negative() {
+        test_instruction!(
+            Cpu::lda,
+            |_cpu: &mut Cpu, _memory: &mut Memory| {},
+            Operand::Value(129),
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                assert_eq!(cpu.accumulator, 129);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), true);
+            }
+        );
+    }
 }
