@@ -712,8 +712,7 @@ impl Cpu {
     }
 
     fn php(&mut self, memory: &mut Memory, _arg_address: Option<Address>) {
-        let mut flags = self.flags;
-        flags.insert(Flags::BREAK1 | Flags::BREAK2);
+        let flags = self.flags;
         memory.stack(&mut self.stack_pointer).push_u8(flags.bits());
     }
 
@@ -725,7 +724,6 @@ impl Cpu {
     fn plp(&mut self, memory: &mut Memory, _arg_address: Option<Address>) {
         let new_flags = memory.stack(&mut self.stack_pointer).pop_u8();
         self.flags = Flags::from_bits(new_flags).unwrap();
-        self.flags.remove(Flags::BREAK1 | Flags::BREAK2);
     }
 
     fn rol(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
@@ -2287,4 +2285,107 @@ mod test {
         );
     }
 
+    #[test]
+    fn should_execute_pha() {
+        test_instruction!(
+            Cpu::pha,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.accumulator = 0x93;
+            },
+            Operand::None,
+            |cpu: &mut Cpu, memory: &mut Memory| {
+                assert_eq!(memory.stack(&mut cpu.stack_pointer).pop_u8(), 0x93);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_php() {
+        test_instruction!(
+            Cpu::php,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.flags.bits = 0b0101_1010;
+            },
+            Operand::None,
+            |cpu: &mut Cpu, memory: &mut Memory| {
+                assert_eq!(memory.stack(&mut cpu.stack_pointer).pop_u8(), 0b0101_1010);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_pla() {
+        test_instruction!(
+            Cpu::pla,
+            |cpu: &mut Cpu, memory: &mut Memory| {
+                cpu.accumulator = 0x17;
+                memory
+                    .stack(&mut cpu.stack_pointer)
+                    .push_u8(cpu.accumulator);
+                cpu.accumulator = 0x42;
+            },
+            Operand::None,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                assert_eq!(cpu.accumulator, 0x17);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_pla_with_zero() {
+        test_instruction!(
+            Cpu::pla,
+            |cpu: &mut Cpu, memory: &mut Memory| {
+                cpu.accumulator = 0x00;
+                memory
+                    .stack(&mut cpu.stack_pointer)
+                    .push_u8(cpu.accumulator);
+                cpu.accumulator = 0x42;
+            },
+            Operand::None,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                assert_eq!(cpu.accumulator, 0x00);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), true);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_pla_with_negative() {
+        test_instruction!(
+            Cpu::pla,
+            |cpu: &mut Cpu, memory: &mut Memory| {
+                cpu.accumulator = 0x9B;
+                memory
+                    .stack(&mut cpu.stack_pointer)
+                    .push_u8(cpu.accumulator);
+                cpu.accumulator = 0x42;
+            },
+            Operand::None,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                assert_eq!(cpu.accumulator, 0x9B);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), true);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_plp() {
+        test_instruction!(
+            Cpu::plp,
+            |cpu: &mut Cpu, memory: &mut Memory| {
+                cpu.flags.bits = 0b0101_1010;
+                memory.stack(&mut cpu.stack_pointer).push_u8(cpu.flags.bits);
+                cpu.flags.bits = 0b1011_0111;
+            },
+            Operand::None,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                assert_eq!(cpu.flags.bits(), 0b0101_1010);
+            }
+        );
+    }
 }
