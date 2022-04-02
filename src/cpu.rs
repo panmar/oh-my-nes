@@ -727,31 +727,21 @@ impl Cpu {
     }
 
     fn rol(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
-        match arg_address {
-            Some(address) => {
-                let arg = memory.read_u8(address);
-                let new_carry = (arg & 0b1000_0000) != 0;
-                let mut result = arg.rotate_left(1);
-                result &= 0b1111_1110;
-                if self.flags.contains(Flags::CARRY) {
-                    result |= 0b0000_0001;
-                }
-                memory.write_u8(address, result);
-                self.flags.set(Flags::ZERO, result == 0);
-                self.flags.set(Flags::NEGATIVE, result & 0b1000_0000 != 0);
-                self.flags.set(Flags::CARRY, new_carry);
-            }
-            None => {
-                let new_carry = (self.accumulator & 0b1000_0000) != 0;
-                let mut result = self.accumulator.rotate_left(1);
-                result &= 0b1111_1110;
-                if self.flags.contains(Flags::CARRY) {
-                    result |= 0b0000_0001;
-                }
-                self.set_accumulator(result);
-                self.flags.set(Flags::CARRY, new_carry);
-            }
+        fn rol_internal(flags: &mut Flags, arg_ref: &mut u8) {
+            let old_carry = flags.contains(Flags::CARRY) as u8;
+            flags.set(Flags::CARRY, *arg_ref & 0b1000_0000 != 0);
+            *arg_ref <<= 1;
+            *arg_ref |= old_carry;
+            flags.set(Flags::ZERO, *arg_ref == 0);
+            flags.set(Flags::NEGATIVE, *arg_ref & 0b1000_0000 != 0);
         }
+
+        let arg_ref = match arg_address {
+            Some(address) => memory.read_u8_for_writing(address),
+            None => &mut self.accumulator,
+        };
+
+        rol_internal(&mut self.flags, arg_ref);
     }
 
     fn ror(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
@@ -2385,6 +2375,114 @@ mod test {
             Operand::None,
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 assert_eq!(cpu.flags.bits(), 0b0101_1010);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_rol_accumulator() {
+        test_instruction!(
+            Cpu::rol,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.flags.set(Flags::CARRY, false);
+                cpu.accumulator = 0b0010_1001;
+            },
+            Operand::None,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                assert_eq!(cpu.accumulator, 0b0101_0010);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+                assert_eq!(cpu.flags.contains(Flags::CARRY), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_rol_memory() {
+        test_instruction!(
+            Cpu::rol,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.flags.set(Flags::CARRY, false);
+                // cpu.accumulator = 0b0010_1001;
+            },
+            Operand::Value(0b0010_1001),
+            |cpu: &mut Cpu, memory: &mut Memory| {
+                assert_eq!(get_operand_value(memory), 0b0101_0010);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+                assert_eq!(cpu.flags.contains(Flags::CARRY), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_rol_with_carry_input() {
+        test_instruction!(
+            Cpu::rol,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.flags.set(Flags::CARRY, true);
+                cpu.accumulator = 0b0010_1001;
+            },
+            Operand::None,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                assert_eq!(cpu.accumulator, 0b0101_0011);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+                assert_eq!(cpu.flags.contains(Flags::CARRY), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_rol_with_carry_output() {
+        test_instruction!(
+            Cpu::rol,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.flags.set(Flags::CARRY, false);
+                cpu.accumulator = 0b1010_1001;
+            },
+            Operand::None,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                assert_eq!(cpu.accumulator, 0b0101_0010);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+                assert_eq!(cpu.flags.contains(Flags::CARRY), true);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_rol_with_zero() {
+        test_instruction!(
+            Cpu::rol,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.flags.set(Flags::CARRY, false);
+                cpu.accumulator = 0b1000_0000;
+            },
+            Operand::None,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                assert_eq!(cpu.accumulator, 0b0000_0000);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), true);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+                assert_eq!(cpu.flags.contains(Flags::CARRY), true);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_rol_with_negative() {
+        test_instruction!(
+            Cpu::rol,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.flags.set(Flags::CARRY, false);
+                cpu.accumulator = 0b0100_1000;
+            },
+            Operand::None,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                assert_eq!(cpu.accumulator, 0b1001_0000);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), true);
+                assert_eq!(cpu.flags.contains(Flags::CARRY), false);
             }
         );
     }
