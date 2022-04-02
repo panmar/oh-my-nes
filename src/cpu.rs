@@ -143,6 +143,18 @@ impl Cpu {
             .set(Flags::NEGATIVE, self.accumulator & 0b1000_0000 != 0);
     }
 
+    fn add_with_carry(lhs: u8, rhs: u8, carry: bool) -> (u8, bool, bool) {
+        let (result, carry_1) = lhs.overflowing_add(rhs);
+        let (result, carry_2) = result.overflowing_add(carry as u8);
+
+        let new_carry = carry_1 || carry_2;
+
+        // http://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
+        let overflow = (lhs ^ result) & (rhs ^ result) & 0x80 != 0;
+
+        (result, new_carry, overflow)
+    }
+
     fn compare(&mut self, lhs: u8, rhs: u8) {
         self.flags.set(Flags::CARRY, lhs >= rhs);
         self.flags.set(Flags::ZERO, lhs == rhs);
@@ -453,18 +465,11 @@ const INSTRUCTIONS: [Instruction; 256] = [
 impl Cpu {
     fn adc(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
         let arg = memory.read_u8(arg_address.unwrap());
-        let (result, carry_1) = self.accumulator.overflowing_add(arg);
-        let (result, carry_2) = result.overflowing_add(self.flags.contains(Flags::CARRY) as u8);
-
-        self.flags.set(Flags::CARRY, carry_1 || carry_2);
-
-        // http://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
-        self.flags.set(
-            Flags::OVERFLOW,
-            (self.accumulator ^ result) & (arg ^ result) & 0x80 != 0,
-        );
-
-        self.set_accumulator(result);
+        let (accum, carry, overflow) =
+            Cpu::add_with_carry(self.accumulator, arg, self.flags.contains(Flags::CARRY));
+        self.set_accumulator(accum);
+        self.flags.set(Flags::CARRY, carry);
+        self.flags.set(Flags::OVERFLOW, overflow);
     }
 
     fn and(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
@@ -775,21 +780,12 @@ impl Cpu {
     fn sbc(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
         let mut arg = memory.read_u8(arg_address.unwrap());
         // A - B = A + (-B) = A + (!B + 1)
-        arg = !arg.wrapping_add(1);
-
-        let (result, carry_1) = self.accumulator.overflowing_add(arg);
-        // TODO(panmar): Do we need to negate the carry?
-        let (result, carry_2) = result.overflowing_add(!self.flags.contains(Flags::CARRY) as u8);
-
-        self.flags.set(Flags::CARRY, !(carry_1 || carry_2));
-
-        // http://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
-        self.flags.set(
-            Flags::OVERFLOW,
-            (self.accumulator ^ result) & (arg ^ result) & 0x80 != 0,
-        );
-
-        self.set_accumulator(result);
+        arg = arg.wrapping_neg().wrapping_sub(1);
+        let (accum, carry, overflow) =
+            Cpu::add_with_carry(self.accumulator, arg, self.flags.contains(Flags::CARRY));
+        self.set_accumulator(accum);
+        self.flags.set(Flags::CARRY, carry);
+        self.flags.set(Flags::OVERFLOW, overflow);
     }
 
     fn sec(&mut self, _memory: &mut Memory, _arg_address: Option<Address>) {
@@ -2595,6 +2591,78 @@ mod test {
             Operand::None,
             |cpu: &mut Cpu, _memory: &mut Memory| {
                 assert_eq!(cpu.program_counter, 0x0277);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_sbc() {
+        test_instruction!(
+            Cpu::sbc,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.flags.set(Flags::CARRY, false);
+                cpu.accumulator = 0x79;
+            },
+            Operand::Value(0x1F),
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                assert_eq!(cpu.accumulator, 0x59);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+                assert_eq!(cpu.flags.contains(Flags::CARRY), true);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_sbc_with_negative() {
+        test_instruction!(
+            Cpu::sbc,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.flags.set(Flags::CARRY, false);
+                cpu.accumulator = 0x1F;
+            },
+            Operand::Value(0x79),
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                assert_eq!(cpu.accumulator, 0xA5);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), true);
+                assert_eq!(cpu.flags.contains(Flags::CARRY), false);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_sbc_with_zero() {
+        test_instruction!(
+            Cpu::sbc,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.flags.set(Flags::CARRY, true);
+                cpu.accumulator = 0xBF;
+            },
+            Operand::Value(0xBF),
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                assert_eq!(cpu.accumulator, 0x00);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), true);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), false);
+                assert_eq!(cpu.flags.contains(Flags::CARRY), true);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_sbc_with_carry() {
+        test_instruction!(
+            Cpu::sbc,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.flags.set(Flags::CARRY, false);
+                cpu.accumulator = 0xBF;
+            },
+            Operand::Value(0xBF),
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                assert_eq!(cpu.accumulator, 0xFF);
+                assert_eq!(cpu.flags.contains(Flags::ZERO), false);
+                assert_eq!(cpu.flags.contains(Flags::NEGATIVE), true);
+                assert_eq!(cpu.flags.contains(Flags::CARRY), false);
             }
         );
     }
