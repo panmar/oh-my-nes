@@ -655,13 +655,10 @@ impl Cpu {
     }
 
     fn jsr(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
-        let arg = memory.read_u8(arg_address.unwrap());
-
-        // TODO(panmar): Do we change stack pointer here?
         memory
             .stack(&mut self.stack_pointer)
-            .push_u16(self.program_counter - 1);
-        self.program_counter = arg as u16;
+            .push_u16(self.program_counter);
+        self.program_counter = arg_address.unwrap();
     }
 
     fn lda(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
@@ -921,7 +918,7 @@ mod test {
             $instruction(&mut cpu, &mut memory, arg_address);
 
             // then
-            $then(&cpu, &memory);
+            $then(&mut cpu, &mut memory);
         };
     }
 
@@ -2027,6 +2024,21 @@ mod test {
             Operand::Address(0x0678),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, 0x0678);
+            }
+        );
+    }
+
+    #[test]
+    fn should_execute_jsr() {
+        test_instruction!(
+            Cpu::jsr,
+            |cpu: &mut Cpu, _memory: &mut Memory| {
+                cpu.program_counter = 0x02FF;
+            },
+            Operand::Address(0x0678),
+            |cpu: &mut Cpu, memory: &mut Memory| {
+                assert_eq!(cpu.program_counter, 0x0678);
+                assert_eq!(memory.stack(&mut cpu.stack_pointer).pop_u16(), 0x02FF);
             }
         );
     }
