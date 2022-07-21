@@ -2,7 +2,7 @@
 A NES emulator
 
 ## Resources
-* https://www.nesdev.com/NESDoc.pdf
+* https://www.nesdev.org/NESDoc.pdf
 * https://www.nesdev.org/wiki/Nesdev
 * https://web.archive.org/web/20210803072420/http://www.obelisk.me.uk/6502/
 * https://www.nesdev.org/obelisk-6502-guide/
