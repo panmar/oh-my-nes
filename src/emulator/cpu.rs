@@ -1,6 +1,6 @@
 // TODO: Remove me
 #![allow(dead_code)]
-use crate::memory::Address;
+use super::memory::Address;
 
 use super::memory::Memory;
 use bitflags::bitflags;
