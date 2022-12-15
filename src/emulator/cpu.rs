@@ -5,6 +5,7 @@ use super::memory::Address;
 use super::memory::Memory;
 use bitflags::bitflags;
 
+#[derive(Debug)]
 pub struct Cpu {
     accumulator: u8,
     x_index: u8,
@@ -63,8 +64,18 @@ impl Cpu {
             y_index: 0,
             flags: Flags::empty(),
             stack_pointer: 0xFF,
-            program_counter: 0,
+            program_counter: 0x8000,
         }
+    }
+
+    pub fn run_with_debug_info(&mut self, memory: &mut Memory) {
+        dbg!(&self);
+        self.decode_and_execute(memory);
+        dbg!(&self);
+        self.decode_and_execute(memory);
+        dbg!(&self);
+        self.decode_and_execute(memory);
+        dbg!(&self);
     }
 
     fn decode_and_execute(&mut self, memory: &mut Memory) {

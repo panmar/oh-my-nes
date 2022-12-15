@@ -51,7 +51,7 @@ impl Memory {
     }
 
     pub fn insert_cartridge(&mut self, rom: Rom) {
-        self.data[0x8000..0xFFFF].copy_from_slice(&rom.prg_rom);
+        self.data[0x8000..0xFFFF + 1].copy_from_slice(&rom.prg_rom);
     }
 
     pub fn read_u8(&self, address: Address) -> u8 {
