@@ -1,6 +1,41 @@
+//  _______________ $10000  _______________
+// | PRG-ROM       |       |               |
+// | Upper Bank    |       |               |
+// |_ _ _ _ _ _ _ _| $C000 | PRG-ROM       |
+// | PRG-ROM       |       |               |
+// | Lower Bank    |       |               |
+// |_______________| $8000 |_______________|
+// | SRAM          |       | SRAM          |
+// |_______________| $6000 |_______________|
+// | Expansion ROM |       | Expansion ROM |
+// |_______________| $4020 |_______________|
+// | I/O Registers |       |               |
+// |_ _ _ _ _ _ _ _| $4000 |               |
+// | Mirrors       |       | I/O Registers |
+// | $2000-$2007   |       |               |
+// |_ _ _ _ _ _ _ _| $2008 |               |
+// | I/O Registers |       |               |
+// |_______________| $2000 |_______________|
+// | Mirrors       |       |               |
+// | $0000-$07FF   |       |               |
+// |_ _ _ _ _ _ _ _| $0800 |               |
+// | RAM           |       | RAM           |
+// |_ _ _ _ _ _ _ _| $0200 |               |
+// | Stack         |       |               |
+// |_ _ _ _ _ _ _ _| $0100 |               |
+// | Zero Page     |       |               |
+// |_______________| $0000 |_______________|
+
+use super::cartridge::Rom;
+
 const MEMORY_SIZE: usize = 0xFFFF + 1;
 const STACK_BEGIN: usize = 0x0100;
 const STACK_END: usize = 0x01FF;
+
+const RAM_BEGIN: u16 = 0x0000;
+const RAM_MIRRORS_END: u16 = 0x1FFF;
+const PPU_REGISTERS: u16 = 0x2000;
+const PPU_REGISTERS_MIRRORS_END: u16 = 0x3FFF;
 
 pub type Address = u16;
 
@@ -13,6 +48,10 @@ impl Memory {
         Memory {
             data: [0; MEMORY_SIZE],
         }
+    }
+
+    pub fn insert_cartridge(&mut self, rom: Rom) {
+        self.data[0x8000..0xFFFF].copy_from_slice(&rom.prg_rom);
     }
 
     pub fn read_u8(&self, address: Address) -> u8 {
@@ -40,9 +79,11 @@ impl Memory {
         self.write_u8(address + 1, bytes[1]);
     }
 
+    // TODO(panmar): Should we distinguish between read and write (so write does not mutate cartridge memory)
     fn compute_effective_address(address: Address) -> Address {
         let effective_address = match address {
             0x0800..=0x1FFF => address & 0b00_0111_1111_1111,
+            PPU_REGISTERS..=PPU_REGISTERS_MIRRORS_END => address & 0b0010_0000_0000_0111,
             _ => address,
         };
         return effective_address;
