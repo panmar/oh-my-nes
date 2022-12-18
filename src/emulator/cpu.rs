@@ -12,9 +12,7 @@ pub struct Cpu {
     accumulator: u8,
     x_index: u8,
     y_index: u8,
-
     flags: Flags,
-
     stack_pointer: u8,
     program_counter: u16,
 }
