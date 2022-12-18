@@ -1,26 +1,26 @@
 //  _______________ $10000  _______________
 // | PRG-ROM       |       |               |
 // | Upper Bank    |       |               |
-// |_ _ _ _ _ _ _ _| $C000 | PRG-ROM       |
+// |_ _ _ _ _ _ _ _| $C000 |    PRG-ROM    |
 // | PRG-ROM       |       |               |
 // | Lower Bank    |       |               |
 // |_______________| $8000 |_______________|
-// | SRAM          |       | SRAM          |
+// | SRAM          |       |     SRAM      |
 // |_______________| $6000 |_______________|
 // | Expansion ROM |       | Expansion ROM |
 // |_______________| $4020 |_______________|
 // | I/O Registers |       |               |
 // |_ _ _ _ _ _ _ _| $4000 |               |
-// | Mirrors       |       | I/O Registers |
-// | $2000-$2007   |       |               |
+// | Mirrors       |       |               |
+// | $2000-$2007   |       | I/O Registers |
 // |_ _ _ _ _ _ _ _| $2008 |               |
 // | I/O Registers |       |               |
 // |_______________| $2000 |_______________|
 // | Mirrors       |       |               |
 // | $0000-$07FF   |       |               |
 // |_ _ _ _ _ _ _ _| $0800 |               |
-// | RAM           |       | RAM           |
-// |_ _ _ _ _ _ _ _| $0200 |               |
+// | RAM           |       |               |
+// |_ _ _ _ _ _ _ _| $0200 |      RAM      |
 // | Stack         |       |               |
 // |_ _ _ _ _ _ _ _| $0100 |               |
 // | Zero Page     |       |               |
@@ -36,6 +36,7 @@ const RAM_BEGIN: u16 = 0x0000;
 const RAM_MIRRORS_END: u16 = 0x1FFF;
 const PPU_REGISTERS: u16 = 0x2000;
 const PPU_REGISTERS_MIRRORS_END: u16 = 0x3FFF;
+const PRG_ROM_BEGIN: usize = 0x8000;
 
 pub type Address = u16;
 
@@ -51,7 +52,22 @@ impl Memory {
     }
 
     pub fn insert_cartridge(&mut self, rom: Rom) {
-        self.data[0x8000..0xFFFF + 1].copy_from_slice(&rom.prg_rom);
+        // PRG Rom Size might be 16 kB or 32 kB.
+        // Because [0x8000 … 0x10000] mapped region is 32 kB of addressable space,
+        // the upper 16 kB needs to be mapped to the lower 16 kB (if a game has only 16 kB of PRG ROM)
+        println!("PGR_ROM size = {:#0X}", rom.prg_rom.len());
+        if rom.prg_rom.len() != 0x4000 && rom.prg_rom.len() != 0x8000 {
+            panic!("Incorrect PRG_ROM size");
+        }
+
+        if rom.prg_rom.len() <= 0x4000 {
+            self.data[PRG_ROM_BEGIN..PRG_ROM_BEGIN + rom.prg_rom.len()]
+                .copy_from_slice(&rom.prg_rom);
+            self.data[0xC000..0xC000 + rom.prg_rom.len()].copy_from_slice(&rom.prg_rom);
+        } else {
+            self.data[PRG_ROM_BEGIN..PRG_ROM_BEGIN + rom.prg_rom.len()]
+                .copy_from_slice(&rom.prg_rom);
+        }
     }
 
     pub fn read_u8(&self, address: Address) -> u8 {
@@ -79,7 +95,8 @@ impl Memory {
         self.write_u8(address + 1, bytes[1]);
     }
 
-    // TODO(panmar): Should we distinguish between read and write (so write does not mutate cartridge memory)
+    // TODO(panmar): Should we distinguish between read and write?
+    // (so write does not mutate readonly cartridge memory)
     fn compute_effective_address(address: Address) -> Address {
         let effective_address = match address {
             0x0800..=0x1FFF => address & 0b00_0111_1111_1111,
