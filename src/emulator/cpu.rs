@@ -62,8 +62,8 @@ impl Cpu {
             accumulator: 0,
             x_index: 0,
             y_index: 0,
-            flags: Flags::empty(),
-            stack_pointer: 0xFF,
+            flags: Flags::INTERRUPT_DISABLE | Flags::BREAK1,
+            stack_pointer: 0xFD,
             program_counter: 0x8000,
         }
     }
