@@ -1,4 +1,4 @@
-use std::{env, process::exit, path::Path};
+use std::{env, path::Path, process::exit};
 
 use emulator::Emulator;
 
@@ -18,9 +18,4 @@ fn main() {
     let rom_path = Path::new(&args[1]);
     let mut emulator = Emulator::new();
     emulator.run(rom_path);
-
-    // let mut emulator = chip8::Emulator::new();
-    // emulator.load_program_from_file(&args[1]);
-    // let mut platform = sdl_platform::SDLPlatform::new();
-    // platform.run(&mut emulator);
 }
