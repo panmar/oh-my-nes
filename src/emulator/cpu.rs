@@ -540,24 +540,21 @@ impl Cpu {
         asl_internal(&mut self.flags, arg_ref);
     }
 
-    fn bcc(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
+    fn bcc(&mut self, _memory: &mut Memory, arg_address: Option<Address>) {
         if !self.flags.contains(Flags::CARRY) {
-            let relative_address = memory.read_u8(arg_address.unwrap()) as i8;
-            self.jump(relative_address);
+            self.jump(arg_address.unwrap() as i8);
         }
     }
 
-    fn bcs(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
+    fn bcs(&mut self, _memory: &mut Memory, arg_address: Option<Address>) {
         if self.flags.contains(Flags::CARRY) {
-            let relative_address = memory.read_u8(arg_address.unwrap()) as i8;
-            self.jump(relative_address);
+            self.jump(arg_address.unwrap() as i8);
         }
     }
 
-    fn beq(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
+    fn beq(&mut self, _memory: &mut Memory, arg_address: Option<Address>) {
         if self.flags.contains(Flags::ZERO) {
-            let relative_address = memory.read_u8(arg_address.unwrap()) as i8;
-            self.jump(relative_address);
+            self.jump(arg_address.unwrap() as i8);
         }
     }
 
@@ -569,24 +566,21 @@ impl Cpu {
         self.flags.set(Flags::OVERFLOW, result & 0b0100_0000 != 0);
     }
 
-    fn bmi(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
+    fn bmi(&mut self, _memory: &mut Memory, arg_address: Option<Address>) {
         if self.flags.contains(Flags::NEGATIVE) {
-            let relative_address = memory.read_u8(arg_address.unwrap()) as i8;
-            self.jump(relative_address);
+            self.jump(arg_address.unwrap() as i8);
         }
     }
 
-    fn bne(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
+    fn bne(&mut self, _memory: &mut Memory, arg_address: Option<Address>) {
         if !self.flags.contains(Flags::ZERO) {
-            let relative_address = memory.read_u8(arg_address.unwrap()) as i8;
-            self.jump(relative_address);
+            self.jump(arg_address.unwrap() as i8);
         }
     }
 
-    fn bpl(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
+    fn bpl(&mut self, _memory: &mut Memory, arg_address: Option<Address>) {
         if !self.flags.contains(Flags::NEGATIVE) {
-            let relative_address = memory.read_u8(arg_address.unwrap()) as i8;
-            self.jump(relative_address);
+            self.jump(arg_address.unwrap() as i8);
         }
     }
 
@@ -603,17 +597,15 @@ impl Cpu {
         self.program_counter = memory.read_u16(0xFFFE);
     }
 
-    fn bvc(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
+    fn bvc(&mut self, _memory: &mut Memory, arg_address: Option<Address>) {
         if !self.flags.contains(Flags::OVERFLOW) {
-            let relative_address = memory.read_u8(arg_address.unwrap()) as i8;
-            self.jump(relative_address);
+            self.jump(arg_address.unwrap() as i8);
         }
     }
 
-    fn bvs(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
+    fn bvs(&mut self, _memory: &mut Memory, arg_address: Option<Address>) {
         if self.flags.contains(Flags::OVERFLOW) {
-            let relative_address = memory.read_u8(arg_address.unwrap()) as i8;
-            self.jump(relative_address);
+            self.jump(arg_address.unwrap() as i8);
         }
     }
 
@@ -1097,7 +1089,7 @@ mod test {
                 cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
                 cpu.flags.set(Flags::CARRY, false);
             },
-            Operand::Value(122i8 as u8),
+            Operand::Address(122i8 as u16),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS + 122);
             }
@@ -1113,7 +1105,7 @@ mod test {
                 cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
                 cpu.flags.set(Flags::CARRY, false);
             },
-            Operand::Value(-71i8 as u8),
+            Operand::Address(-71i8 as u16),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS - 71);
             }
@@ -1129,7 +1121,7 @@ mod test {
                 cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
                 cpu.flags.set(Flags::CARRY, true);
             },
-            Operand::Value(51i8 as u8),
+            Operand::Address(51i8 as u16),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS + 51);
             }
@@ -1145,7 +1137,7 @@ mod test {
                 cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
                 cpu.flags.set(Flags::CARRY, true);
             },
-            Operand::Value(-111i8 as u8),
+            Operand::Address(-111i8 as u16),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS - 111);
             }
@@ -1177,7 +1169,7 @@ mod test {
                 cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
                 cpu.flags.set(Flags::ZERO, true);
             },
-            Operand::Value(51i8 as u8),
+            Operand::Address(51i8 as u16),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS + 51);
             }
@@ -1193,7 +1185,7 @@ mod test {
                 cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
                 cpu.flags.set(Flags::ZERO, true);
             },
-            Operand::Value(-99i8 as u8),
+            Operand::Address(-99i8 as u16),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS - 99);
             }
@@ -1209,7 +1201,7 @@ mod test {
                 cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
                 cpu.flags.set(Flags::ZERO, false);
             },
-            Operand::Value(-99i8 as u8),
+            Operand::Address(-99i8 as u16),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS);
             }
@@ -1309,7 +1301,7 @@ mod test {
                 cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
                 cpu.flags.set(Flags::NEGATIVE, true);
             },
-            Operand::Value(51i8 as u8),
+            Operand::Address(51i8 as u16),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS + 51);
             }
@@ -1325,7 +1317,7 @@ mod test {
                 cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
                 cpu.flags.set(Flags::NEGATIVE, true);
             },
-            Operand::Value(-114i8 as u8),
+            Operand::Address(-114i8 as u16),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS - 114);
             }
@@ -1341,7 +1333,7 @@ mod test {
                 cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
                 cpu.flags.set(Flags::ZERO, false);
             },
-            Operand::Value(51i8 as u8),
+            Operand::Address(51i8 as u16),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS + 51);
             }
@@ -1357,7 +1349,7 @@ mod test {
                 cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
                 cpu.flags.set(Flags::ZERO, true);
             },
-            Operand::Value(51i8 as u8),
+            Operand::Address(51i8 as u16),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS);
             }
@@ -1373,7 +1365,7 @@ mod test {
                 cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
                 cpu.flags.set(Flags::NEGATIVE, false);
             },
-            Operand::Value(51i8 as u8),
+            Operand::Address(51i8 as u16),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS + 51);
             }
@@ -1405,7 +1397,7 @@ mod test {
                 cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
                 cpu.flags.set(Flags::OVERFLOW, true);
             },
-            Operand::Value(51i8 as u8),
+            Operand::Address(51i8 as u16),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS);
             }
@@ -1421,7 +1413,7 @@ mod test {
                 cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
                 cpu.flags.set(Flags::OVERFLOW, false);
             },
-            Operand::Value(-51i8 as u8),
+            Operand::Address(-51i8 as u16),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS - 51);
             }
@@ -1437,7 +1429,7 @@ mod test {
                 cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
                 cpu.flags.set(Flags::OVERFLOW, false);
             },
-            Operand::Value(51i8 as u8),
+            Operand::Address(51i8 as u16),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS);
             }
@@ -1453,7 +1445,7 @@ mod test {
                 cpu.program_counter = PROGRAM_COUNTER_ADDRESS;
                 cpu.flags.set(Flags::OVERFLOW, true);
             },
-            Operand::Value(-51i8 as u8),
+            Operand::Address(-51i8 as u16),
             |cpu: &Cpu, _memory: &Memory| {
                 assert_eq!(cpu.program_counter, PROGRAM_COUNTER_ADDRESS - 51);
             }
