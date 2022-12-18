@@ -68,21 +68,57 @@ impl Cpu {
         }
     }
 
-    pub fn run_with_debug_info(&mut self, memory: &mut Memory) {
-        dbg!(&self);
-        self.decode_and_execute(memory);
-        dbg!(&self);
-        self.decode_and_execute(memory);
-        dbg!(&self);
-        self.decode_and_execute(memory);
-        dbg!(&self);
+    pub fn execute_all(&mut self, memory: &mut Memory) {
+        let mut count = 0u32;
+        loop {
+            count += 1;
+            self.decode_and_execute(memory);
+            if count == 400 {
+                break;
+            }
+        }
     }
 
-    fn decode_and_execute(&mut self, memory: &mut Memory) {
+    pub fn decode_and_execute(&mut self, memory: &mut Memory) {
+        print!("{:04X}\t", self.program_counter);
+
         let opcode = memory.read_u8(self.program_counter);
         let instruction = &INSTRUCTIONS[opcode as usize];
-        let param_address = self.fetch_instruction_param_address(memory, instruction.mode);
 
+        let m1 = memory.read_u8(self.program_counter);
+        let m2 = memory.read_u8(self.program_counter + 1);
+        let m3 = memory.read_u8(self.program_counter + 2);
+
+        match instruction.bytesize {
+            1 => print!("{:02X}\t", m1),
+            2 => print!("{:02X} {:02X}\t", m1, m2),
+            3 => print!("{:02X} {:02X} {:02X}", m1, m2, m3),
+            _ => {}
+        }
+        print!("\t");
+
+        let mut mnemonic_address = "".to_string();
+        match instruction.mnemonic {
+            y if y.contains("$NNNN") => mnemonic_address = format!("{:02X}{:02X}", m3, m2),
+            x if x.contains("$NN") => mnemonic_address = format!("{:02X}", m2),
+            _ => {}
+        }
+
+        let mut mnemonic: String = instruction.mnemonic.clone().to_string();
+        if instruction.mnemonic.contains("NNNN") {
+            mnemonic = instruction.mnemonic.replace("NNNN", &mnemonic_address);
+        } else if instruction.mnemonic.contains("NN") {
+            mnemonic = instruction.mnemonic.replace("NN", &mnemonic_address);
+        }
+
+        print!("{:13}", mnemonic);
+
+        println!(
+            "A:{:02X} X:{:02X}, Y:{:02X}, P:{:02X}, SP:{:02X} PPU:{}, {} CYC:{}",
+            self.accumulator, self.x_index, self.y_index, self.flags, self.stack_pointer, 0, 0, 0
+        );
+
+        let param_address = self.fetch_instruction_param_address(memory, instruction.mode);
         self.program_counter += instruction.bytesize as u16;
         (instruction.handler)(self, memory, param_address);
     }
