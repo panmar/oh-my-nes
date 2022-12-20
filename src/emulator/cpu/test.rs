@@ -1711,7 +1711,7 @@ fn should_execute_rti_after_brk() {
     test_instruction!(
         Cpu::rti,
         |cpu: &mut Cpu, memory: &mut Memory| {
-            cpu.flags = Flags::from_bits(0b0101_1010).unwrap();
+            cpu.flags = Flags::from_bits(0b0100_1010).unwrap();
             cpu.program_counter = 0x0277;
             cpu.brk(memory, None);
             cpu.flags = Flags::from_bits(0b1100_0110).unwrap();
@@ -1720,7 +1720,7 @@ fn should_execute_rti_after_brk() {
         Operand::None,
         |cpu: &Cpu, _memory: &Memory| {
             assert_eq!(cpu.program_counter, 0x0277);
-            assert_eq!(cpu.flags.bits(), 0b0101_1010);
+            assert_eq!(cpu.flags.bits(), 0b0110_1010);
         }
     );
 }
