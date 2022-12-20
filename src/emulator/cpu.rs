@@ -19,14 +19,14 @@ pub struct Cpu {
 
 bitflags! {
     struct Flags: u8 {
-        const NEGATIVE = 0b10000000;
-        const OVERFLOW = 0b01000000;
-        const BREAK1 = 0b00100000;
-        const BREAK2 = 0b00010000;
-        const DECIMAL = 0b00001000;
-        const INTERRUPT_DISABLE = 0b00000100;
-        const ZERO = 0b00000010;
         const CARRY = 0b00000001;
+        const ZERO = 0b00000010;
+        const INTERRUPT_DISABLE = 0b00000100;
+        const DECIMAL = 0b00001000;
+        const BREAK1 = 0b00010000;
+        const BREAK2 = 0b00100000;
+        const OVERFLOW = 0b01000000;
+        const NEGATIVE = 0b10000000;
     }
 }
 
@@ -62,7 +62,7 @@ impl Cpu {
             accumulator: 0,
             x_index: 0,
             y_index: 0,
-            flags: Flags::INTERRUPT_DISABLE | Flags::BREAK1,
+            flags: Flags::INTERRUPT_DISABLE | Flags::BREAK2,
             stack_pointer: 0xFD,
             program_counter: 0x8000,
         }
