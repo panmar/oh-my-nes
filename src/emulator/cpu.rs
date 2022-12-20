@@ -212,7 +212,7 @@ impl Cpu {
         self.accumulator = value;
         self.flags.set(Flags::ZERO, self.accumulator == 0);
         self.flags
-            .set(Flags::NEGATIVE, self.accumulator & 0b1000_0000 != 0);
+            .set(Flags::NEGATIVE, (self.accumulator & 0b1000_0000) != 0);
     }
 
     fn add_with_carry(lhs: u8, rhs: u8, carry: bool) -> (u8, bool, bool) {
@@ -293,8 +293,8 @@ impl Cpu {
         let arg = memory.read_u8(arg_address.unwrap());
         let result = self.accumulator & arg;
         self.flags.set(Flags::ZERO, result == 0);
-        self.flags.set(Flags::NEGATIVE, result & 0b1000_0000 != 0);
-        self.flags.set(Flags::OVERFLOW, result & 0b0100_0000 != 0);
+        self.flags.set(Flags::NEGATIVE, (arg & 0b1000_0000) != 0);
+        self.flags.set(Flags::OVERFLOW, (arg & 0b0100_0000) != 0);
     }
 
     fn bmi(&mut self, _memory: &mut Memory, arg_address: Option<Address>) {
