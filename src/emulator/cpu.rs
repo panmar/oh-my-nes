@@ -80,7 +80,7 @@ impl Cpu {
     }
 
     pub fn decode_and_execute(&mut self, memory: &mut Memory) {
-        print!("{:04X}\t", self.program_counter);
+        print!("{:04X}  ", self.program_counter);
 
         let opcode = memory.read_u8(self.program_counter);
         let instruction = &INSTRUCTIONS[opcode as usize];
@@ -89,33 +89,58 @@ impl Cpu {
         let m2 = memory.read_u8(self.program_counter + 1);
         let m3 = memory.read_u8(self.program_counter + 2);
 
-        match instruction.bytesize {
-            1 => print!("{:02X}\t", m1),
-            2 => print!("{:02X} {:02X}\t", m1, m2),
-            3 => print!("{:02X} {:02X} {:02X}", m1, m2, m3),
-            _ => {}
-        }
-        print!("\t");
+        let instruction_in_memory = match instruction.bytesize {
+            1 => format!("{:02X}", m1),
+            2 => format!("{:02X} {:02X}", m1, m2),
+            3 => format!("{:02X} {:02X} {:02X}", m1, m2, m3),
+            _ => "".to_string(),
+        };
+        print!("{:10}", instruction_in_memory);
 
-        let mut mnemonic_address = "".to_string();
-        match instruction.mnemonic {
-            y if y.contains("$NNNN") => mnemonic_address = format!("{:02X}{:02X}", m3, m2),
-            x if x.contains("$NN") => mnemonic_address = format!("{:02X}", m2),
-            _ => {}
-        }
+        let mnemonic_address = match instruction.mnemonic {
+            x if x.contains("$NNNN") => format!("{:02X}{:02X}", m3, m2),
+            x if x.contains("$NN") => format!("{:02X}", m2),
+            _ => "".to_string(),
+        };
 
         let mut mnemonic: String = instruction.mnemonic.clone().to_string();
         if instruction.mnemonic.contains("NNNN") {
             mnemonic = instruction.mnemonic.replace("NNNN", &mnemonic_address);
         } else if instruction.mnemonic.contains("NN") {
-            mnemonic = instruction.mnemonic.replace("NN", &mnemonic_address);
+            let absolute_address = format!(
+                "{:04X}",
+                self.program_counter as i32 + instruction.bytesize as i32 + m2 as i32
+            );
+            if instruction.mnemonic.contains("BCS")
+                || instruction.mnemonic.contains("BCS")
+                || instruction.mnemonic.contains("BCC")
+                || instruction.mnemonic.contains("BCC")
+                || instruction.mnemonic.contains("BEQ")
+                || instruction.mnemonic.contains("BNE")
+                || instruction.mnemonic.contains("BVS")
+                || instruction.mnemonic.contains("BVC")
+                || instruction.mnemonic.contains("BPL")
+                || instruction.mnemonic.contains("BMI")
+            {
+                mnemonic = instruction.mnemonic.replace("NN", &absolute_address);
+            } else {
+                mnemonic = instruction.mnemonic.replace("NN", &mnemonic_address);
+            }
         }
 
-        print!("{:13}", mnemonic);
+        let mnemonic = match mnemonic {
+            m if m.contains("STA") => format!("{} = {:02X}", m, self.accumulator),
+            m if m.contains("STX") => format!("{} = {:02X}", m, self.x_index),
+            m if m.contains("STY") => format!("{} = {:02X}", m, self.y_index),
+            m if m.contains("BIT") => format!("{} = {:02X}", m, self.accumulator),
+            _ => mnemonic,
+        };
+
+        print!("{:32}", mnemonic);
 
         println!(
-            "A:{:02X} X:{:02X}, Y:{:02X}, P:{:02X}, SP:{:02X} PPU:{}, {} CYC:{}",
-            self.accumulator, self.x_index, self.y_index, self.flags, self.stack_pointer, 0, 0, 0
+            "A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X}",
+            self.accumulator, self.x_index, self.y_index, self.flags, self.stack_pointer
         );
 
         let param_address = self.fetch_instruction_param_address(memory, instruction.mode);
