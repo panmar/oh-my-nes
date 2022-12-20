@@ -487,7 +487,9 @@ impl Cpu {
     }
 
     fn php(&mut self, memory: &mut Memory, _arg_address: Option<Address>) {
-        let flags = self.flags;
+        let mut flags = self.flags.clone();
+        flags.insert(Flags::BREAK1);
+        flags.insert(Flags::BREAK2);
         memory.stack(&mut self.stack_pointer).push_u8(flags.bits());
     }
 
@@ -499,6 +501,8 @@ impl Cpu {
     fn plp(&mut self, memory: &mut Memory, _arg_address: Option<Address>) {
         let new_flags = memory.stack(&mut self.stack_pointer).pop_u8();
         self.flags = Flags::from_bits(new_flags).unwrap();
+        self.flags.remove(Flags::BREAK1);
+        self.flags.insert(Flags::BREAK2);
     }
 
     fn rol(&mut self, memory: &mut Memory, arg_address: Option<Address>) {

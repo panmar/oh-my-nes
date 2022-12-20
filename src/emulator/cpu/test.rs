@@ -1429,7 +1429,8 @@ fn should_execute_php() {
         },
         Operand::None,
         |cpu: &mut Cpu, memory: &mut Memory| {
-            assert_eq!(memory.stack(&mut cpu.stack_pointer).pop_u8(), 0b0101_1010);
+            let flags = 0b0101_1010 | Flags::BREAK1.bits() | Flags::BREAK2.bits();
+            assert_eq!(memory.stack(&mut cpu.stack_pointer).pop_u8(), flags);
         }
     );
 }
@@ -1505,7 +1506,8 @@ fn should_execute_plp() {
         },
         Operand::None,
         |cpu: &Cpu, _memory: &Memory| {
-            assert_eq!(cpu.flags.bits(), 0b0101_1010);
+            let flags = 0b0101_1010 & !(Flags::BREAK1.bits()) | Flags::BREAK2.bits();
+            assert_eq!(cpu.flags.bits(), flags);
         }
     );
 }
