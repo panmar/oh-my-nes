@@ -7,7 +7,7 @@ use super::memory::Address;
 use super::memory::Memory;
 use bitflags::bitflags;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Cpu {
     accumulator: u8,
     x_index: u8,
@@ -56,6 +56,35 @@ struct Instruction {
     handler: fn(cpu: &mut Cpu, memory: &mut Memory, arg_address: Option<Address>),
 }
 
+struct ExecutionStepInfo<'a> {
+    previous_cpu_state: Cpu,
+    new_cpu_state: Cpu,
+    instruction: &'a Instruction,
+    instruction_hex: Vec<u8>,
+    instruction_param_address: Option<Address>,
+    instruction_param: Option<u8>,
+}
+
+impl ExecutionStepInfo<'_> {
+    fn new(
+        previous_cpu_state: Cpu,
+        new_cpu_state: Cpu,
+        instruction: &Instruction,
+        instruction_hex: Vec<u8>,
+        instruction_param_address: Option<Address>,
+        instruction_param: Option<u8>,
+    ) -> ExecutionStepInfo {
+        ExecutionStepInfo {
+            previous_cpu_state,
+            new_cpu_state,
+            instruction,
+            instruction_hex,
+            instruction_param_address,
+            instruction_param,
+        }
+    }
+}
+
 impl Cpu {
     pub fn new() -> Cpu {
         Cpu {
@@ -72,80 +101,120 @@ impl Cpu {
         let mut count = 0u32;
         loop {
             count += 1;
-            self.decode_and_execute(memory);
+            let info = self.decode_and_execute(memory);
+            Cpu::log_execution_step_info(&info);
             if count == 8992 {
                 break;
             }
         }
     }
 
-    pub fn decode_and_execute(&mut self, memory: &mut Memory) {
-        print!("{:04X}  ", self.program_counter);
+    fn log_execution_step_info(info: &ExecutionStepInfo) {
+        print!("{:04X}  ", info.previous_cpu_state.program_counter);
 
-        let opcode = memory.read_u8(self.program_counter);
-        let instruction = &INSTRUCTIONS[opcode as usize];
-
-        let m1 = memory.read_u8(self.program_counter);
-        let m2 = memory.read_u8(self.program_counter + 1);
-        let m3 = memory.read_u8(self.program_counter + 2);
-
-        let instruction_in_memory = match instruction.bytesize {
-            1 => format!("{:02X}", m1),
-            2 => format!("{:02X} {:02X}", m1, m2),
-            3 => format!("{:02X} {:02X} {:02X}", m1, m2, m3),
+        let instruction_in_memory = match info.instruction_hex.len() {
+            1 => format!("{:02X}", info.instruction_hex[0]),
+            2 => format!(
+                "{:02X} {:02X}",
+                info.instruction_hex[0], info.instruction_hex[1]
+            ),
+            3 => format!(
+                "{:02X} {:02X} {:02X}",
+                info.instruction_hex[0], info.instruction_hex[1], info.instruction_hex[2]
+            ),
             _ => "".to_string(),
         };
         print!("{:10}", instruction_in_memory);
 
-        let mnemonic_address = match instruction.mnemonic {
-            x if x.contains("$NNNN") => format!("{:02X}{:02X}", m3, m2),
-            x if x.contains("$NN") => format!("{:02X}", m2),
+        let mnemonic_address = match info.instruction.mnemonic {
+            x if x.contains("$NNNN") => format!(
+                "{:02X}{:02X}",
+                info.instruction_hex[2], info.instruction_hex[1]
+            ),
+            x if x.contains("$NN") => format!("{:02X}", info.instruction_hex[1]),
             _ => "".to_string(),
         };
 
-        let mut mnemonic: String = instruction.mnemonic.clone().to_string();
-        if instruction.mnemonic.contains("NNNN") {
-            mnemonic = instruction.mnemonic.replace("NNNN", &mnemonic_address);
-        } else if instruction.mnemonic.contains("NN") {
+        let mut mnemonic: String = info.instruction.mnemonic.clone().to_string();
+        if info.instruction.mnemonic.contains("NNNN") {
+            mnemonic = info.instruction.mnemonic.replace("NNNN", &mnemonic_address);
+        } else if info.instruction.mnemonic.contains("NN") {
             let absolute_address = format!(
                 "{:04X}",
-                self.program_counter as i32 + instruction.bytesize as i32 + m2 as i32
+                info.previous_cpu_state.program_counter as i32
+                    + info.instruction.bytesize as i32
+                    + info.instruction_hex[1] as i32
             );
-            if instruction.mnemonic.contains("BCS")
-                || instruction.mnemonic.contains("BCS")
-                || instruction.mnemonic.contains("BCC")
-                || instruction.mnemonic.contains("BCC")
-                || instruction.mnemonic.contains("BEQ")
-                || instruction.mnemonic.contains("BNE")
-                || instruction.mnemonic.contains("BVS")
-                || instruction.mnemonic.contains("BVC")
-                || instruction.mnemonic.contains("BPL")
-                || instruction.mnemonic.contains("BMI")
+            if info.instruction.mnemonic.contains("BCS")
+                || info.instruction.mnemonic.contains("BCS")
+                || info.instruction.mnemonic.contains("BCC")
+                || info.instruction.mnemonic.contains("BCC")
+                || info.instruction.mnemonic.contains("BEQ")
+                || info.instruction.mnemonic.contains("BNE")
+                || info.instruction.mnemonic.contains("BVS")
+                || info.instruction.mnemonic.contains("BVC")
+                || info.instruction.mnemonic.contains("BPL")
+                || info.instruction.mnemonic.contains("BMI")
             {
-                mnemonic = instruction.mnemonic.replace("NN", &absolute_address);
+                mnemonic = info.instruction.mnemonic.replace("NN", &absolute_address);
             } else {
-                mnemonic = instruction.mnemonic.replace("NN", &mnemonic_address);
+                mnemonic = info.instruction.mnemonic.replace("NN", &mnemonic_address);
             }
         }
 
-        let mnemonic = match mnemonic {
-            m if m.contains("STA") => format!("{} = {:02X}", m, self.accumulator),
-            m if m.contains("STX") => format!("{} = {:02X}", m, self.x_index),
-            m if m.contains("STY") => format!("{} = {:02X}", m, self.y_index),
-            m if m.contains("BIT") => format!("{} = {:02X}", m, self.accumulator),
-            _ => mnemonic,
-        };
+        if info.instruction.mnemonic.contains("STA")
+            || info.instruction.mnemonic.contains("STX")
+            || info.instruction.mnemonic.contains("STY")
+            || info.instruction.mnemonic.contains("BIT")
+            || ((info.instruction.mnemonic.contains("LDX")
+                || info.instruction.mnemonic.contains("LDA"))
+                && info.instruction.mnemonic.contains("NNNN"))
+        {
+            mnemonic = format!("{} = {:02X}", mnemonic, info.instruction_param.unwrap());
+        }
 
         print!("{:32}", mnemonic);
 
         println!(
             "A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X}",
-            self.accumulator, self.x_index, self.y_index, self.flags, self.stack_pointer
+            info.previous_cpu_state.accumulator,
+            info.previous_cpu_state.x_index,
+            info.previous_cpu_state.y_index,
+            info.previous_cpu_state.flags,
+            info.previous_cpu_state.stack_pointer
         );
+    }
+
+    fn decode_and_execute(&mut self, memory: &mut Memory) -> ExecutionStepInfo {
+        let previous_cpu_state = self.clone();
+        let opcode = memory.read_u8(self.program_counter);
+        let instruction = &INSTRUCTIONS[opcode as usize];
+
+        let mut instruction_hex = Vec::new();
+        let mut bytesize = instruction.bytesize;
+        let mut pc = self.program_counter;
+        while bytesize > 0 {
+            let m = memory.read_u8(pc);
+            instruction_hex.push(m);
+            bytesize -= 1;
+            pc += 1;
+        }
 
         let param_address = self.fetch_instruction_param_address(memory, instruction.mode);
+        let param = match param_address {
+            Some(address) => Some(memory.read_u8(address)),
+            None => None,
+        };
         self.program_counter += instruction.bytesize as u16;
         (instruction.handler)(self, memory, param_address);
+        ExecutionStepInfo::new(
+            previous_cpu_state,
+            self.clone(),
+            &instruction,
+            instruction_hex,
+            param_address,
+            param,
+        )
     }
 
     fn fetch_instruction_param_address(
