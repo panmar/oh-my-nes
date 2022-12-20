@@ -322,7 +322,7 @@ fn should_execute_bit() {
         |cpu: &mut Cpu, _memory: &mut Memory| {
             cpu.accumulator = 0b1011_1001;
         },
-        Operand::Value(0b0111_1000),
+        Operand::Value(0b0011_1001),
         |cpu: &Cpu, _memory: &Memory| {
             assert_eq!(cpu.accumulator, 0b1011_1001);
             assert_eq!(cpu.flags.contains(Flags::ZERO), false);
@@ -337,11 +337,11 @@ fn should_execute_bit_with_negative() {
     test_instruction!(
         Cpu::bit,
         |cpu: &mut Cpu, _memory: &mut Memory| {
-            cpu.accumulator = 0b1011_1001;
+            cpu.accumulator = 0b1111_1001;
         },
-        Operand::Value(0b1111_1000),
+        Operand::Value(0b1011_1000),
         |cpu: &Cpu, _memory: &Memory| {
-            assert_eq!(cpu.accumulator, 0b1011_1001);
+            assert_eq!(cpu.accumulator, 0b1111_1001);
             assert_eq!(cpu.flags.contains(Flags::ZERO), false);
             assert_eq!(cpu.flags.contains(Flags::NEGATIVE), true);
             assert_eq!(cpu.flags.contains(Flags::OVERFLOW), false);
@@ -373,7 +373,7 @@ fn should_execute_bit_with_zero() {
         |cpu: &mut Cpu, _memory: &mut Memory| {
             cpu.accumulator = 0b1010_0101;
         },
-        Operand::Value(0b0101_1010),
+        Operand::Value(0b0001_1010),
         |cpu: &Cpu, _memory: &Memory| {
             assert_eq!(cpu.accumulator, 0b1010_0101);
             assert_eq!(cpu.flags.contains(Flags::ZERO), true);
