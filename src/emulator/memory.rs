@@ -55,7 +55,7 @@ impl Memory {
         // PRG Rom Size might be 16 kB or 32 kB.
         // Because [0x8000 … 0x10000] mapped region is 32 kB of addressable space,
         // the upper 16 kB needs to be mapped to the lower 16 kB (if a game has only 16 kB of PRG ROM)
-        println!("PGR_ROM size = {:#0X}", rom.prg_rom.len());
+        // println!("PGR_ROM size = {:#0X}", rom.prg_rom.len());
         if rom.prg_rom.len() != 0x4000 && rom.prg_rom.len() != 0x8000 {
             panic!("Incorrect PRG_ROM size");
         }
