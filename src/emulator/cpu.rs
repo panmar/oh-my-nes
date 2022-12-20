@@ -73,7 +73,7 @@ impl Cpu {
         loop {
             count += 1;
             self.decode_and_execute(memory);
-            if count == 400 {
+            if count == 8992 {
                 break;
             }
         }
