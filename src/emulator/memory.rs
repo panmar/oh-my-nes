@@ -141,6 +141,16 @@ impl Memory {
 }
 
 impl Stack<'_> {
+    pub fn read_u8(&self) -> u8 {
+        let address = STACK_BEGIN as Address + self.stack_pointer.wrapping_add(1) as Address;
+        return self.memory.read_u8(address);
+    }
+
+    pub fn write_u8(&mut self, address: Address, value: u8) {
+        self.memory
+            .write_u8(STACK_BEGIN as Address + address, value);
+    }
+
     pub fn push_u8(&mut self, value: u8) {
         self.memory.write_u8(
             STACK_BEGIN as Address + *self.stack_pointer as Address,
