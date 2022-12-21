@@ -160,7 +160,7 @@ impl Stack<'_> {
     }
 
     pub fn push_u16(&mut self, value: u16) {
-        let data_bytes = value.to_le_bytes();
+        let data_bytes = value.to_be_bytes();
         for byte in data_bytes {
             self.push_u8(byte);
         }
@@ -174,9 +174,9 @@ impl Stack<'_> {
     }
 
     pub fn pop_u16(&mut self) -> u16 {
-        let b1 = self.pop_u8();
-        let b2 = self.pop_u8();
-        return u16::from_le_bytes([b2, b1]);
+        let lo = self.pop_u8();
+        let hi = self.pop_u8();
+        return u16::from_be_bytes([hi, lo]);
     }
 }
 
