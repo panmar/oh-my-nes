@@ -42,12 +42,18 @@ pub type Address = u16;
 
 pub struct Memory {
     data: [u8; MEMORY_SIZE],
+    watches: Vec<Watch>,
+}
+
+struct Watch {
+    address: Address,
 }
 
 impl Memory {
     pub fn new() -> Memory {
         Memory {
             data: [0; MEMORY_SIZE],
+            watches: Vec::new(),
         }
     }
 
@@ -86,6 +92,13 @@ impl Memory {
 
     pub fn write_u8(&mut self, address: Address, value: u8) {
         let effective_address = Memory::compute_effective_address(address) as usize;
+
+        for watch in &self.watches {
+            if watch.address == effective_address as Address {
+                println!("Watch address {:04X} is being written", watch.address);
+            }
+        }
+
         self.data[effective_address] = value;
     }
 
@@ -104,6 +117,12 @@ impl Memory {
             _ => address,
         };
         return effective_address;
+    }
+}
+
+impl Memory {
+    pub fn add_watch(&mut self, address: Address) {
+        self.watches.push(Watch { address });
     }
 }
 
