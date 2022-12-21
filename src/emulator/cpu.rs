@@ -6,6 +6,7 @@ mod test;
 use super::memory::Address;
 use super::memory::Memory;
 use bitflags::bitflags;
+use regex::Regex;
 
 #[derive(Clone, Debug)]
 pub struct Cpu {
@@ -146,7 +147,6 @@ impl Cpu {
                     + info.instruction_hex[1] as i32
             );
             if info.instruction.mnemonic.contains("BCS")
-                || info.instruction.mnemonic.contains("BCS")
                 || info.instruction.mnemonic.contains("BCC")
                 || info.instruction.mnemonic.contains("BCC")
                 || info.instruction.mnemonic.contains("BEQ")
@@ -162,14 +162,8 @@ impl Cpu {
             }
         }
 
-        if info.instruction.mnemonic.contains("STA")
-            || info.instruction.mnemonic.contains("STX")
-            || info.instruction.mnemonic.contains("STY")
-            || info.instruction.mnemonic.contains("BIT")
-            || ((info.instruction.mnemonic.contains("LDX")
-                || info.instruction.mnemonic.contains("LDA"))
-                && info.instruction.mnemonic.contains("NNNN"))
-        {
+        let re = Regex::new(r"[^#]\$\d{2}$").unwrap();
+        if re.is_match(&mnemonic) {
             mnemonic = format!("{} = {:02X}", mnemonic, info.instruction_param.unwrap());
         }
 
