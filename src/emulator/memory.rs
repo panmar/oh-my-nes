@@ -107,16 +107,15 @@ impl Memory {
     }
 }
 
-/// A stack view on the memory
 pub struct Stack<'a> {
-    data: &'a mut [u8],
+    memory: &'a mut Memory,
     stack_pointer: &'a mut u8,
 }
 
 impl Memory {
     pub fn stack<'a>(&'a mut self, stack_pointer: &'a mut u8) -> Stack<'a> {
         Stack {
-            data: &mut self.data[STACK_BEGIN..STACK_END + 1],
+            memory: self,
             stack_pointer,
         }
     }
@@ -124,7 +123,10 @@ impl Memory {
 
 impl Stack<'_> {
     pub fn push_u8(&mut self, value: u8) {
-        self.data[*self.stack_pointer as usize] = value;
+        self.memory.write_u8(
+            STACK_BEGIN as Address + *self.stack_pointer as Address,
+            value,
+        );
         *self.stack_pointer = self.stack_pointer.wrapping_sub(1);
     }
 
@@ -137,7 +139,9 @@ impl Stack<'_> {
 
     pub fn pop_u8(&mut self) -> u8 {
         *self.stack_pointer = self.stack_pointer.wrapping_add(1);
-        return self.data[*self.stack_pointer as usize];
+        return self
+            .memory
+            .read_u8(STACK_BEGIN as Address + *self.stack_pointer as Address);
     }
 
     pub fn pop_u16(&mut self) -> u16 {
