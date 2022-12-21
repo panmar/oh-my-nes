@@ -501,7 +501,7 @@ impl Cpu {
     fn jsr(&mut self, memory: &mut Memory, arg_address: Option<Address>) {
         memory
             .stack(&mut self.stack_pointer)
-            .push_u16(self.program_counter);
+            .push_u16(self.program_counter - 1);
         self.program_counter = arg_address.unwrap();
     }
 
@@ -617,7 +617,7 @@ impl Cpu {
     }
 
     fn rts(&mut self, memory: &mut Memory, _arg_address: Option<Address>) {
-        self.program_counter = memory.stack(&mut self.stack_pointer).pop_u16();
+        self.program_counter = memory.stack(&mut self.stack_pointer).pop_u16() + 1;
     }
 
     fn sbc(&mut self, memory: &mut Memory, arg_address: Option<Address>) {

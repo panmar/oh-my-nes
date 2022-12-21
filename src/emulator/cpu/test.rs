@@ -1155,7 +1155,7 @@ fn should_execute_jsr() {
         Operand::Address(0x0678),
         |cpu: &mut Cpu, memory: &mut Memory| {
             assert_eq!(cpu.program_counter, 0x0678);
-            assert_eq!(memory.stack(&mut cpu.stack_pointer).pop_u16(), 0x02FF);
+            assert_eq!(memory.stack(&mut cpu.stack_pointer).pop_u16(), 0x02FE);
         }
     );
 }
