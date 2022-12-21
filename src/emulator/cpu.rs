@@ -613,6 +613,8 @@ impl Cpu {
     fn rti(&mut self, memory: &mut Memory, _arg_address: Option<Address>) {
         let new_flags = memory.stack(&mut self.stack_pointer).pop_u8();
         self.flags = Flags::from_bits(new_flags).unwrap();
+        self.flags.remove(Flags::BREAK1);
+        self.flags.insert(Flags::BREAK2);
         self.program_counter = memory.stack(&mut self.stack_pointer).pop_u16();
     }
 
